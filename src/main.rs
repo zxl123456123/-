@@ -1,8 +1,8 @@
-//! 随手记：一块可以调透明度的桌面待办窗。
+//! 随手记：一张可以调透明度的桌面纸条。
 //!
-//! 窗口形态参考 floating-todo（无边框、透明、置顶、透明度只铺在底色上）。
-//! 自绘标题栏参考 egui 的 custom_window_frame。渲染固定用 Glow：
-//! Windows 上 wgpu 经常把透明窗口画成黑底，或者连文字一起变淡。
+//! 窗口行为参考 floating-todo（无边框、透明、置顶、透明度只铺在纸上）。
+//! 纸条跟着内容收紧，不铺一块空底。外观收在标题栏里。
+//! 渲染固定用 Glow：Windows 上 wgpu 经常把透明窗口画成黑底，或者连文字一起变淡。
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -11,15 +11,19 @@ use std::sync::Arc;
 use eframe::egui::{self, Align, Color32, CursorIcon, Id, Layout, RichText, Stroke, Vec2};
 use suishouji::AppState;
 
+const MENU_WIDTH: f32 = 220.0;
+const MIN_W: f32 = 300.0;
+const MIN_H: f32 = 168.0;
+const MAX_H: f32 = 560.0;
+const ROW_H: f32 = 36.0;
+const RAIL_W: f32 = 5.0;
+
 fn main() -> eframe::Result {
     let state = suishouji::load();
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("随手记")
-        .with_inner_size([
-            state.window.w.unwrap_or(340.0),
-            state.window.h.unwrap_or(520.0),
-        ])
-        .with_min_inner_size([280.0, 240.0])
+        .with_inner_size([state.window.w.unwrap_or(340.0), estimate_height(&state)])
+        .with_min_inner_size([MIN_W, MIN_H])
         .with_decorations(false)
         .with_transparent(true)
         .with_resizable(true)
@@ -74,7 +78,7 @@ fn configure_style(ctx: &egui::Context) {
     let mut style = (*ctx.style()).clone();
     style
         .text_styles
-        .insert(egui::TextStyle::Body, egui::FontId::proportional(15.0));
+        .insert(egui::TextStyle::Body, egui::FontId::proportional(16.0));
     style
         .text_styles
         .insert(egui::TextStyle::Button, egui::FontId::proportional(14.0));
@@ -84,48 +88,70 @@ fn configure_style(ctx: &egui::Context) {
     style
         .text_styles
         .insert(egui::TextStyle::Heading, egui::FontId::proportional(16.0));
-    style.spacing.item_spacing = Vec2::new(8.0, 8.0);
-    style.spacing.button_padding = Vec2::new(10.0, 6.0);
-    style.spacing.interact_size.y = 22.0;
+    style.spacing.item_spacing = Vec2::new(8.0, 4.0);
+    style.spacing.button_padding = Vec2::new(8.0, 4.0);
+    style.spacing.interact_size.y = 20.0;
+    style.spacing.scroll.floating = true;
+    style.spacing.scroll.bar_width = 8.0;
+    style.spacing.scroll.floating_width = 3.0;
+    style.spacing.scroll.foreground_color = false;
+    style.interaction.selectable_labels = false;
     ctx.set_style(style);
 }
 
+#[derive(Clone, Copy)]
 struct Look {
     panel: Color32,
     text: Color32,
-    weak: Color32,
+    faint: Color32,
     accent: Color32,
-    border: Color32,
-    input: Color32,
-    row: Color32,
-    chip: Color32,
+    line: Color32,
+    rule: Color32,
+    rail: Color32,
+    hover: Color32,
+    danger: Color32,
+    dark: bool,
 }
 
 fn look_of(state: &AppState) -> Look {
     let alpha = (state.opacity.clamp(0.25, 0.96) * 255.0).round() as u8;
     if state.dark {
         Look {
-            panel: Color32::from_rgba_unmultiplied(22, 24, 32, alpha),
-            text: Color32::from_rgb(244, 245, 248),
-            weak: Color32::from_rgb(168, 174, 186),
-            accent: Color32::from_rgb(129, 140, 248),
-            border: Color32::from_rgba_unmultiplied(255, 255, 255, 28),
-            input: Color32::from_rgba_unmultiplied(255, 255, 255, 16),
-            row: Color32::from_rgba_unmultiplied(255, 255, 255, 10),
-            chip: Color32::from_rgba_unmultiplied(255, 255, 255, 18),
+            panel: Color32::from_rgba_unmultiplied(36, 30, 24, alpha),
+            text: Color32::from_rgb(247, 240, 230),
+            faint: Color32::from_rgb(168, 154, 138),
+            accent: Color32::from_rgb(232, 176, 92),
+            line: Color32::from_rgba_unmultiplied(255, 236, 210, 28),
+            rule: Color32::from_rgba_unmultiplied(255, 228, 196, 22),
+            rail: Color32::from_rgb(214, 148, 64),
+            hover: Color32::from_rgba_unmultiplied(255, 236, 210, 18),
+            danger: Color32::from_rgb(255, 114, 105),
+            dark: true,
         }
     } else {
         Look {
-            panel: Color32::from_rgba_unmultiplied(255, 255, 255, alpha),
-            text: Color32::from_rgb(24, 26, 32),
-            weak: Color32::from_rgb(98, 104, 118),
-            accent: Color32::from_rgb(79, 70, 229),
-            border: Color32::from_rgba_unmultiplied(20, 24, 40, 28),
-            input: Color32::from_rgba_unmultiplied(20, 24, 40, 10),
-            row: Color32::from_rgba_unmultiplied(20, 24, 40, 8),
-            chip: Color32::from_rgba_unmultiplied(20, 24, 40, 10),
+            panel: Color32::from_rgba_unmultiplied(255, 244, 210, alpha),
+            text: Color32::from_rgb(52, 38, 22),
+            faint: Color32::from_rgb(138, 112, 78),
+            accent: Color32::from_rgb(196, 122, 36),
+            line: Color32::from_rgba_unmultiplied(92, 58, 20, 28),
+            rule: Color32::from_rgba_unmultiplied(176, 132, 64, 38),
+            rail: Color32::from_rgb(232, 168, 64),
+            hover: Color32::from_rgba_unmultiplied(92, 58, 20, 14),
+            danger: Color32::from_rgb(196, 64, 56),
+            dark: false,
         }
     }
+}
+
+fn estimate_height(state: &AppState) -> f32 {
+    let visible = if state.hide_done {
+        state.open_count()
+    } else {
+        state.todos.len()
+    };
+    let done_bar = if state.done_count() > 0 { 40.0 } else { 8.0 };
+    (52.0 + ROW_H * (visible as f32 + 1.0) + done_bar).clamp(MIN_H, MAX_H)
 }
 
 struct SuishoujiApp {
@@ -134,25 +160,40 @@ struct SuishoujiApp {
     editing: Option<u64>,
     edit_text: String,
     focus_edit: bool,
+    focus_composer: bool,
     scroll_to_top: bool,
     apply_level: bool,
     geometry_dirty: bool,
     save_error: Option<String>,
+    menu_open: bool,
+    menu_button: egui::Rect,
+    menu_rect: egui::Rect,
+    ignore_menu_click: bool,
+    user_height: Option<f32>,
+    last_content_h: f32,
 }
 
 impl SuishoujiApp {
     fn new(state: AppState) -> Self {
         let look = look_of(&state);
+        let last_content_h = estimate_height(&state);
         Self {
             state,
             look,
             editing: None,
             edit_text: String::new(),
             focus_edit: false,
+            focus_composer: true,
             scroll_to_top: false,
             apply_level: true,
             geometry_dirty: false,
             save_error: None,
+            menu_open: false,
+            menu_button: egui::Rect::NOTHING,
+            menu_rect: egui::Rect::NOTHING,
+            ignore_menu_click: false,
+            user_height: None,
+            last_content_h,
         }
     }
 
@@ -174,14 +215,14 @@ impl SuishoujiApp {
         visuals.window_fill = Color32::TRANSPARENT;
         visuals.panel_fill = Color32::TRANSPARENT;
         visuals.extreme_bg_color = Color32::TRANSPARENT;
-        visuals.faint_bg_color = self.look.input;
-        visuals.code_bg_color = self.look.input;
+        visuals.faint_bg_color = Color32::TRANSPARENT;
+        visuals.code_bg_color = Color32::TRANSPARENT;
         visuals.selection.bg_fill = self.look.accent;
         visuals.selection.stroke.color = Color32::WHITE;
         visuals.hyperlink_color = self.look.accent;
         visuals.window_stroke = Stroke::NONE;
         visuals.slider_trailing_fill = true;
-        let radius = egui::CornerRadius::same(12);
+        let radius = egui::CornerRadius::same(8);
         for widget in [
             &mut visuals.widgets.noninteractive,
             &mut visuals.widgets.inactive,
@@ -194,43 +235,49 @@ impl SuishoujiApp {
             widget.fg_stroke.color = self.look.text;
             widget.expansion = 0.0;
         }
-        visuals.widgets.noninteractive.bg_fill = self.look.input;
-        visuals.widgets.inactive.bg_fill = self.look.input;
-        visuals.widgets.inactive.weak_bg_fill = self.look.chip;
-        visuals.widgets.hovered.bg_fill = self.look.accent;
-        visuals.widgets.hovered.weak_bg_fill = self.look.chip;
-        visuals.widgets.hovered.fg_stroke.color = Color32::WHITE;
+        visuals.widgets.noninteractive.bg_fill = Color32::TRANSPARENT;
+        visuals.widgets.inactive.bg_fill = Color32::TRANSPARENT;
+        visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+        visuals.widgets.hovered.bg_fill = self.look.hover;
+        visuals.widgets.hovered.weak_bg_fill = self.look.hover;
+        visuals.widgets.hovered.fg_stroke.color = self.look.text;
         visuals.widgets.active.bg_fill = self.look.accent;
         visuals.widgets.active.fg_stroke.color = Color32::WHITE;
-        visuals.widgets.open.bg_fill = self.look.input;
+        visuals.widgets.open.bg_fill = Color32::TRANSPARENT;
         ctx.set_visuals(visuals);
     }
 
     fn title_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = 2.0;
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if icon_button(
-                    ui,
-                    "×",
-                    self.look.weak,
-                    Some(Color32::from_rgb(220, 78, 90)),
-                )
-                .on_hover_text("关闭")
-                .clicked()
+                if icon_button(ui, "×", self.look.faint, Some(self.look.danger))
+                    .on_hover_text("关闭")
+                    .clicked()
                 {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                 }
-                if icon_button(ui, "–", self.look.weak, None)
+                if icon_button(ui, "–", self.look.faint, None)
                     .on_hover_text("最小化")
                     .clicked()
                 {
                     ui.ctx()
                         .send_viewport_cmd(egui::ViewportCommand::Minimized(true));
                 }
+                let menu = more_button(ui, self.menu_open, &self.look);
+                self.menu_button = menu.rect;
+                if menu.clicked() {
+                    self.menu_open = !self.menu_open;
+                    self.ignore_menu_click = true;
+                }
+                if pin_button(ui, self.state.always_on_top, &self.look).clicked() {
+                    self.state.always_on_top = !self.state.always_on_top;
+                    self.apply_level = true;
+                    self.persist_now();
+                }
 
                 let mut drag_size = ui.available_size_before_wrap();
-                drag_size.y = drag_size.y.max(24.0);
+                drag_size.y = drag_size.y.max(26.0);
                 let drag = ui.allocate_response(drag_size, egui::Sense::drag());
                 if drag.hovered() || drag.dragged() {
                     ui.ctx().set_cursor_icon(CursorIcon::Grab);
@@ -238,12 +285,18 @@ impl SuishoujiApp {
                 if drag.drag_started() {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
+                let open = self.state.open_count();
+                let title = if open == 0 {
+                    "随手记".to_owned()
+                } else {
+                    format!("随手记  ·  {open}")
+                };
                 ui.painter().text(
-                    drag.rect.left_center() + Vec2::new(2.0, 0.0),
+                    drag.rect.left_center() + Vec2::new(8.0, 0.0),
                     egui::Align2::LEFT_CENTER,
-                    "随手记",
-                    egui::FontId::proportional(15.0),
-                    self.look.weak,
+                    title,
+                    egui::FontId::proportional(14.0),
+                    self.look.text,
                 );
             });
         });
@@ -251,46 +304,42 @@ impl SuishoujiApp {
 
     fn composer(&mut self, ui: &mut egui::Ui) {
         let width = ui.available_width();
-        let height = 40.0;
-        let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), egui::Sense::hover());
-        ui.painter()
-            .rect_filled(rect, egui::CornerRadius::same(20), self.look.input);
-
-        let button = circle_action(
-            ui,
-            rect.right_center() - Vec2::new(22.0, 0.0),
-            self.look.accent,
-        );
-        let field = egui::Rect::from_min_max(
-            rect.left_top() + Vec2::new(14.0, 4.0),
-            egui::pos2(rect.right() - 46.0, rect.bottom() - 4.0),
-        );
-        let mut field_ui = ui.new_child(
+        let (row, _) = ui.allocate_exact_size(Vec2::new(width, ROW_H), egui::Sense::hover());
+        let mut row_ui = ui.new_child(
             egui::UiBuilder::new()
-                .max_rect(field)
+                .max_rect(row)
                 .layout(Layout::left_to_right(Align::Center)),
         );
-        let response = field_ui.add(
+        row_ui.spacing_mut().item_spacing.x = 8.0;
+        // 和列表左侧的拖动点对齐，圆圈才能落在同一列。
+        let _grip_column = row_ui.allocate_exact_size(Vec2::new(10.0, 18.0), egui::Sense::hover());
+        let ready = !trim_view(&self.state.draft).is_empty();
+        let add = add_mark(&mut row_ui, ready, &self.look);
+        let response = row_ui.add(
             egui::TextEdit::singleline(&mut self.state.draft)
-                .hint_text("记一件事，回车添加")
-                .desired_width(field.width())
+                .hint_text("记一件事，回车")
+                .desired_width(row_ui.available_width())
                 .frame(false)
                 .id(Id::new("composer")),
         );
+        if self.focus_composer {
+            response.request_focus();
+            self.focus_composer = false;
+        }
         let enter = ui.input(|input| input.key_pressed(egui::Key::Enter));
         let escape = ui.input(|input| input.key_pressed(egui::Key::Escape));
-        if escape && response.has_focus() {
+        if escape && response.has_focus() && !self.menu_open {
             self.state.draft.clear();
             self.persist_now();
         } else if response.changed() {
             self.persist_now();
         }
-        let submitted =
-            button.clicked() || (enter && (response.lost_focus() || response.has_focus()));
+        let submitted = add.clicked() || (enter && (response.lost_focus() || response.has_focus()));
         let draft = self.state.draft.clone();
         if submitted && self.state.add(&draft).is_some() {
             self.state.draft.clear();
             self.scroll_to_top = true;
+            self.focus_composer = true;
             self.persist_now();
         }
     }
@@ -304,7 +353,8 @@ impl SuishoujiApp {
             .cloned()
             .collect();
         let hide_done = self.state.hide_done;
-        let has_hidden = hide_done && self.state.done_count() > 0;
+        let done = self.state.done_count();
+        let look = self.look;
         let editing = self.editing;
         let mut edit_text = std::mem::take(&mut self.edit_text);
         let mut toggle = None;
@@ -313,53 +363,69 @@ impl SuishoujiApp {
         let mut commit = false;
         let mut cancel = false;
         let mut reorder = None;
+        let mut toggle_hide = false;
+        let mut clear_done = false;
 
-        let list_height = ui.available_height().max(48.0);
+        let row_count = rows.len() as f32;
+        let needed = ROW_H * row_count + if done > 0 { 52.0 } else { 8.0 };
+        let list_height = needed.min(MAX_H - 92.0).max(1.0);
         egui::ScrollArea::vertical()
             .max_height(list_height)
-            .auto_shrink([false, false])
+            .min_scrolled_height(0.0)
+            .auto_shrink([false, true])
             .show(ui, |ui| {
                 if self.scroll_to_top {
                     ui.scroll_to_cursor(Some(Align::TOP));
                     self.scroll_to_top = false;
                 }
-                if rows.is_empty() {
-                    ui.add_space(18.0);
-                    let message = if has_hidden {
-                        "已完成的都先收起来了"
-                    } else {
-                        "还没有待办。\n上面写一条，回车就会记下。"
-                    };
-                    ui.label(RichText::new(message).color(self.look.weak));
-                    return;
-                }
 
-                for todo in &rows {
+                let open_rows: Vec<_> = rows.iter().filter(|todo| !todo.done).cloned().collect();
+                let done_rows: Vec<_> = rows.iter().filter(|todo| todo.done).cloned().collect();
+                let first_done_id = done_rows.first().map(|item| item.id);
+
+                for todo in open_rows.iter().chain(done_rows.iter()) {
+                    let row_id = Id::new(("todo-row-rect", todo.id));
+                    let row_hot = ui
+                        .data(|data| data.get_temp::<egui::Rect>(row_id))
+                        .is_some_and(|rect| ui.rect_contains_pointer(rect));
+                    if Some(todo.id) == first_done_id {
+                        ui.add_space(6.0);
+                        let rule_y = ui.cursor().top();
+                        ui.painter().hline(
+                            ui.max_rect().x_range(),
+                            rule_y,
+                            Stroke::new(1.0_f32, look.line),
+                        );
+                        ui.add_space(8.0);
+                    }
                     let row = egui::Frame::new()
-                        .fill(self.look.row)
-                        .corner_radius(12)
-                        .inner_margin(egui::Margin::symmetric(8, 6))
+                        .fill(if row_hot {
+                            look.hover
+                        } else {
+                            Color32::TRANSPARENT
+                        })
+                        .corner_radius(8)
+                        .inner_margin(egui::Margin::symmetric(2, 4))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 8.0;
+                                let grip_color = if row_hot { look.faint } else { look.line };
+                                let _drag = ui
+                                    .dnd_drag_source(
+                                        Id::new(("todo-drag", todo.id)),
+                                        todo.id,
+                                        |ui| grip_dots(ui, grip_color),
+                                    )
+                                    .response
+                                    .on_hover_text("拖动排序");
+                                if circle_check(ui, todo.done, &look).clicked() {
+                                    toggle = Some(todo.id);
+                                }
                                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                    if icon_button(ui, "×", self.look.weak, None)
-                                        .on_hover_text("删除")
-                                        .clicked()
-                                    {
+                                    if row_delete(ui, row_hot, &look).clicked() {
                                         delete = Some(todo.id);
                                     }
                                     ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                        let _drag = ui
-                                            .dnd_drag_source(
-                                                Id::new(("todo-drag", todo.id)),
-                                                todo.id,
-                                                |ui| grip_dots(ui, self.look.weak),
-                                            )
-                                            .response
-                                            .on_hover_text("拖动排序");
-                                        if circle_check(ui, todo.done, &self.look).clicked() {
-                                            toggle = Some(todo.id);
-                                        }
                                         if editing == Some(todo.id) {
                                             let edit_id = Id::new(("todo-edit", todo.id));
                                             let response = ui.add(
@@ -385,13 +451,14 @@ impl SuishoujiApp {
                                             let text = if todo.done {
                                                 RichText::new(&todo.text)
                                                     .strikethrough()
-                                                    .color(self.look.weak)
+                                                    .color(look.faint)
                                             } else {
-                                                RichText::new(&todo.text).color(self.look.text)
+                                                RichText::new(&todo.text).color(look.text)
                                             };
                                             let label = ui
                                                 .add(
                                                     egui::Label::new(text)
+                                                        .wrap()
                                                         .sense(egui::Sense::click()),
                                                 )
                                                 .on_hover_text("双击修改");
@@ -403,6 +470,7 @@ impl SuishoujiApp {
                                 });
                             });
                         });
+                    ui.data_mut(|data| data.insert_temp(row_id, row.response.rect));
 
                     let drop = ui.interact(
                         row.response.rect,
@@ -413,13 +481,44 @@ impl SuishoujiApp {
                         ui.painter().hline(
                             drop.rect.x_range(),
                             drop.rect.top(),
-                            Stroke::new(2.0_f32, self.look.accent),
+                            Stroke::new(2.0_f32, look.accent),
                         );
                     }
                     if let Some(payload) = drop.dnd_release_payload::<u64>() {
                         reorder = Some((*payload, todo.id));
                     }
-                    ui.add_space(6.0);
+                }
+
+                if done > 0 {
+                    ui.add_space(4.0);
+                    let caption = if hide_done {
+                        format!("已收起 {done}")
+                    } else {
+                        format!("已完成 {done}")
+                    };
+                    ui.horizontal(|ui| {
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            if !hide_done {
+                                let clear =
+                                    text_action(ui, "清除", look.faint).on_hover_text("清除已完成");
+                                if clear.clicked() {
+                                    clear_done = true;
+                                }
+                            }
+                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                let hint = if hide_done {
+                                    "点击展开"
+                                } else {
+                                    "点击收起"
+                                };
+                                let toggle_done =
+                                    text_action(ui, &caption, look.faint).on_hover_text(hint);
+                                if toggle_done.clicked() {
+                                    toggle_hide = true;
+                                }
+                            });
+                        });
+                    });
                 }
             });
 
@@ -460,82 +559,153 @@ impl SuishoujiApp {
                 self.focus_edit = true;
             }
         }
-    }
-
-    fn footer(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(2.0);
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
-            if toggle_chip(ui, "置顶", self.state.always_on_top, &self.look)
-                .on_hover_text("保持在其他窗口上面")
-                .clicked()
-            {
-                self.state.always_on_top = !self.state.always_on_top;
-                self.apply_level = true;
-                self.persist_now();
-            }
-            if toggle_chip(ui, "深色", self.state.dark, &self.look).clicked() {
-                self.state.dark = !self.state.dark;
-                self.persist_now();
-            }
-            if toggle_chip(ui, "隐藏已完成", self.state.hide_done, &self.look).clicked() {
-                self.state.hide_done = !self.state.hide_done;
-                self.persist_now();
-            }
-        });
-        ui.add_space(2.0);
-        ui.horizontal(|ui| {
-            ui.label(RichText::new("透明度").color(self.look.weak).size(12.0));
-            ui.spacing_mut().slider_width = (ui.available_width() - 44.0).max(80.0);
-            let mut opacity = self.state.opacity;
-            let slider = ui.add(
-                egui::Slider::new(&mut opacity, 0.25..=0.96)
-                    .show_value(false)
-                    .trailing_fill(true),
-            );
-            if slider.changed() {
-                self.state.set_opacity(opacity);
-            }
-            // 拖动过程中先改画面，松手再写盘。延后一帧的重绘在这台事件循环里不可靠。
-            if slider.drag_stopped() || (slider.changed() && !slider.dragged()) {
-                self.persist_now();
-            }
-            ui.label(
-                RichText::new(format!("{:.0}%", self.state.opacity * 100.0))
-                    .color(self.look.weak)
-                    .size(12.0),
-            );
-        });
-        ui.horizontal(|ui| {
-            let open = self.state.open_count();
-            let done = self.state.done_count();
-            ui.label(
-                RichText::new(format!("{open} 未完成 · {done} 已完成"))
-                    .color(self.look.weak)
-                    .size(12.0),
-            );
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let clear = ui
-                    .add_enabled(
-                        done > 0,
-                        egui::Button::new(RichText::new("清除").size(12.0).color(self.look.weak))
-                            .frame(false),
-                    )
-                    .on_hover_text("清除已完成");
-                if clear.clicked() && self.state.clear_done() > 0 {
-                    self.editing = None;
-                    self.persist_now();
-                }
-            });
-        });
-        if let Some(err) = &self.save_error {
-            ui.label(
-                RichText::new(format!("保存失败：{err}")).color(Color32::from_rgb(220, 90, 90)),
-            );
+        if toggle_hide {
+            self.state.hide_done = !self.state.hide_done;
+            self.persist_now();
+        }
+        if clear_done && self.state.clear_done() > 0 {
+            self.editing = None;
+            self.edit_text.clear();
+            self.persist_now();
         }
     }
 
-    fn resize_handles(&self, ui: &mut egui::Ui) {
+    fn appearance_menu(&mut self, ui: &mut egui::Ui) -> egui::Response {
+        let screen = ui.ctx().screen_rect();
+        let x = (self.menu_button.right() - MENU_WIDTH).max(screen.left() + 8.0);
+        let y = self.menu_button.bottom() + 6.0;
+        // 跟待办画在同一层，后画的才能接到点击。单独的 Area 在这个透明窗口里点不到。
+        let menu_rect = egui::Rect::from_min_size(egui::pos2(x, y), Vec2::new(MENU_WIDTH, 176.0));
+        self.menu_rect = menu_rect;
+        let mut host = ui.new_child(
+            egui::UiBuilder::new()
+                .max_rect(menu_rect)
+                .layout(Layout::top_down(Align::Min)),
+        );
+        let blocker = host.interact(
+            menu_rect,
+            Id::new("appearance-menu-block"),
+            egui::Sense::click(),
+        );
+        let sheet = if self.look.dark {
+            Color32::from_rgb(44, 44, 48)
+        } else {
+            Color32::from_rgb(255, 255, 255)
+        };
+        let inner = egui::Frame::new()
+            .fill(sheet)
+            .stroke(Stroke::new(1.0_f32, self.look.line))
+            .corner_radius(14)
+            .inner_margin(egui::Margin::same(14))
+            .shadow(egui::Shadow {
+                offset: [0, 8],
+                blur: 18,
+                spread: 0,
+                color: Color32::from_black_alpha(56),
+            })
+            .show(&mut host, |ui| {
+                ui.set_width(MENU_WIDTH - 28.0);
+                ui.label(
+                    RichText::new(format!("透明度  {:.0}%", self.state.opacity * 100.0))
+                        .size(12.0)
+                        .color(self.look.faint),
+                );
+                ui.add_space(6.0);
+                ui.spacing_mut().slider_width = MENU_WIDTH - 36.0;
+                let mut opacity = self.state.opacity;
+                let slider = ui.add(
+                    egui::Slider::new(&mut opacity, 0.25..=0.96)
+                        .show_value(false)
+                        .trailing_fill(true),
+                );
+                if slider.changed() {
+                    self.state.set_opacity(opacity);
+                }
+                if slider.drag_stopped() || (slider.changed() && !slider.dragged()) {
+                    self.persist_now();
+                }
+                ui.add_space(12.0);
+                ui.label(RichText::new("外观").size(12.0).color(self.look.faint));
+                ui.add_space(6.0);
+                if let Some(dark) = theme_choice(ui, self.state.dark) {
+                    self.state.dark = dark;
+                    self.persist_now();
+                }
+            })
+            .response;
+        blocker.union(inner)
+    }
+
+    fn paint_paper(
+        &self,
+        ui: &mut egui::Ui,
+        paper: egui::Rect,
+        body_top: f32,
+        content_bottom: f32,
+    ) {
+        let painter = ui.painter();
+        let rail = egui::Rect::from_min_max(
+            paper.left_top() + Vec2::new(1.0, 1.0),
+            egui::pos2(paper.left() + 1.0 + RAIL_W, paper.bottom() - 1.0),
+        );
+        painter.rect_filled(
+            rail,
+            egui::CornerRadius {
+                nw: 16,
+                ne: 0,
+                sw: 16,
+                se: 0,
+            },
+            self.look.rail,
+        );
+        painter.hline(
+            (paper.left() + RAIL_W + 8.0)..=(paper.right() - 12.0),
+            body_top - 4.0,
+            Stroke::new(1.0_f32, self.look.line),
+        );
+        let left = paper.left() + 48.0;
+        let right = paper.right() - 16.0;
+        let mut y = content_bottom + 2.0;
+        while y < paper.bottom() - 10.0 {
+            painter.hline(left..=right, y, Stroke::new(1.0_f32, self.look.rule));
+            y += ROW_H;
+        }
+    }
+
+    fn hug_to_content(&mut self, ctx: &egui::Context, paper_h: f32) {
+        let screen = ctx.screen_rect();
+        let pointer_down = ctx.input(|input| input.pointer.any_down());
+        if pointer_down {
+            return;
+        }
+        let content_h = paper_h.max(MIN_H);
+        self.last_content_h = content_h;
+        let mut desired = content_h;
+        if let Some(user) = self.user_height {
+            desired = desired.max(user);
+        }
+        desired = desired.min(MAX_H);
+        if (desired - screen.height()).abs() > 2.5 {
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(
+                screen.width(),
+                desired,
+            )));
+        }
+    }
+
+    fn remember_user_height(&mut self, ctx: &egui::Context) {
+        let Some(inner) = ctx.input(|input| input.viewport().inner_rect) else {
+            return;
+        };
+        let height = inner.height();
+        if height > self.last_content_h + 6.0 {
+            self.user_height = Some(height.clamp(MIN_H, MAX_H));
+        } else if height <= self.last_content_h + 2.0 {
+            self.user_height = None;
+        }
+    }
+
+    fn resize_handles(&mut self, ui: &mut egui::Ui) {
         let rect = ui.ctx().screen_rect();
         let edge = 6.0;
         let corner = 16.0;
@@ -625,6 +795,9 @@ impl SuishoujiApp {
                 ui.ctx()
                     .send_viewport_cmd(egui::ViewportCommand::BeginResize(direction));
             }
+            if response.drag_stopped() {
+                self.remember_user_height(ui.ctx());
+            }
         }
         ui.set_clip_rect(previous_clip);
     }
@@ -651,19 +824,25 @@ impl SuishoujiApp {
     }
 }
 
+fn trim_view(text: &str) -> &str {
+    text.trim()
+}
+
 fn icon_button(
     ui: &mut egui::Ui,
     label: &str,
     color: Color32,
     hover_fill: Option<Color32>,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(Vec2::splat(22.0), egui::Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(26.0), egui::Sense::click());
     if response.hovered() {
-        let fill = hover_fill.unwrap_or(Color32::from_rgba_unmultiplied(255, 255, 255, 28));
+        let fill = hover_fill.unwrap_or(Color32::from_rgba_unmultiplied(128, 128, 128, 28));
         ui.painter().circle_filled(rect.center(), 11.0, fill);
     }
     let text_color = if response.hovered() && hover_fill.is_some() {
         Color32::WHITE
+    } else if response.hovered() {
+        color
     } else {
         color
     };
@@ -671,23 +850,80 @@ fn icon_button(
         rect.center(),
         egui::Align2::CENTER_CENTER,
         label,
-        egui::FontId::proportional(13.0),
+        egui::FontId::proportional(14.0),
         text_color,
     );
     response.on_hover_cursor(CursorIcon::PointingHand)
 }
 
-fn circle_action(ui: &mut egui::Ui, center: egui::Pos2, fill: Color32) -> egui::Response {
-    let rect = egui::Rect::from_center_size(center, Vec2::splat(28.0));
-    let response = ui.interact(rect, Id::new("composer-add"), egui::Sense::click());
-    ui.painter().circle_filled(center, 14.0, fill);
-    ui.painter().text(
-        center,
-        egui::Align2::CENTER_CENTER,
-        "+",
-        egui::FontId::proportional(18.0),
-        Color32::WHITE,
+fn pin_button(ui: &mut egui::Ui, on: bool, look: &Look) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(26.0), egui::Sense::click());
+    let color = if on || response.hovered() {
+        look.accent
+    } else {
+        look.faint
+    };
+    if response.hovered() {
+        ui.painter().circle_filled(rect.center(), 11.0, look.hover);
+    }
+    let head = rect.center() + Vec2::new(0.0, -4.2);
+    if on {
+        ui.painter().circle_filled(head, 3.1, color);
+    } else {
+        ui.painter()
+            .circle_stroke(head, 3.1, Stroke::new(1.3_f32, color));
+    }
+    ui.painter().line_segment(
+        [
+            rect.center() + Vec2::new(0.0, -1.2),
+            rect.center() + Vec2::new(0.0, 6.2),
+        ],
+        Stroke::new(1.4_f32, color),
     );
+    response
+        .on_hover_text(if on { "取消置顶" } else { "置顶" })
+        .on_hover_cursor(CursorIcon::PointingHand)
+}
+
+fn more_button(ui: &mut egui::Ui, open: bool, look: &Look) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(26.0), egui::Sense::click());
+    let color = if open || response.hovered() {
+        look.text
+    } else {
+        look.faint
+    };
+    if open || response.hovered() {
+        ui.painter().circle_filled(rect.center(), 11.0, look.hover);
+    }
+    for index in -1..=1 {
+        ui.painter().circle_filled(
+            rect.center() + Vec2::new(index as f32 * 4.2, 0.0),
+            1.35,
+            color,
+        );
+    }
+    response
+        .on_hover_text("透明度、外观")
+        .on_hover_cursor(CursorIcon::PointingHand)
+}
+
+fn add_mark(ui: &mut egui::Ui, ready: bool, look: &Look) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(22.0), egui::Sense::click());
+    let center = rect.center();
+    let color = if ready { look.accent } else { look.faint };
+    ui.painter()
+        .circle_stroke(center, 8.0, Stroke::new(1.4_f32, color));
+    if ready {
+        let mark = Stroke::new(1.4_f32, color);
+        ui.painter().line_segment(
+            [center + Vec2::new(-3.2, 0.0), center + Vec2::new(3.2, 0.0)],
+            mark,
+        );
+        ui.painter().line_segment(
+            [center + Vec2::new(0.0, -3.2), center + Vec2::new(0.0, 3.2)],
+            mark,
+        );
+    }
     response
         .on_hover_text("记下来")
         .on_hover_cursor(CursorIcon::PointingHand)
@@ -709,47 +945,117 @@ fn circle_check(ui: &mut egui::Ui, checked: bool, look: &Look) -> egui::Response
         );
     } else {
         ui.painter()
-            .circle_stroke(center, 8.0, Stroke::new(1.4_f32, look.weak));
+            .circle_stroke(center, 8.0, Stroke::new(1.4_f32, look.faint));
     }
     response.on_hover_cursor(CursorIcon::PointingHand)
 }
 
 fn grip_dots(ui: &mut egui::Ui, color: Color32) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(10.0, 16.0), egui::Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(10.0, 18.0), egui::Sense::hover());
     for index in 0..3 {
         ui.painter().circle_filled(
-            rect.center() + Vec2::new(0.0, (index as f32 - 1.0) * 3.5),
-            1.15_f32,
+            rect.center() + Vec2::new(0.0, (index as f32 - 1.0) * 3.6),
+            1.15,
             color,
         );
     }
 }
 
-fn toggle_chip(ui: &mut egui::Ui, text: &str, on: bool, look: &Look) -> egui::Response {
-    let galley = ui.painter().layout_no_wrap(
-        text.to_owned(),
-        egui::FontId::proportional(12.0),
-        if on { Color32::WHITE } else { look.text },
-    );
-    let (rect, response) = ui.allocate_exact_size(
-        Vec2::new(galley.size().x + 16.0, 26.0),
-        egui::Sense::click(),
-    );
-    let fill = if on {
-        look.accent
-    } else if response.hovered() {
-        look.input
+fn row_delete(ui: &mut egui::Ui, shown: bool, look: &Look) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(22.0), egui::Sense::click());
+    if shown || response.hovered() {
+        if response.hovered() {
+            ui.painter().circle_filled(rect.center(), 10.0, look.hover);
+        }
+        ui.painter().text(
+            rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "×",
+            egui::FontId::proportional(14.0),
+            if response.hovered() {
+                look.danger
+            } else {
+                look.faint
+            },
+        );
+    }
+    response
+        .on_hover_text("删除")
+        .on_hover_cursor(CursorIcon::PointingHand)
+}
+
+fn text_action(ui: &mut egui::Ui, text: &str, color: Color32) -> egui::Response {
+    ui.add(
+        egui::Label::new(RichText::new(text).size(12.5).color(color)).sense(egui::Sense::click()),
+    )
+    .on_hover_cursor(CursorIcon::PointingHand)
+}
+
+/// 点到另一侧时返回新的深色开关。
+fn theme_choice(ui: &mut egui::Ui, dark: bool) -> Option<bool> {
+    let width = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 32.0), egui::Sense::hover());
+    let track = if dark {
+        Color32::from_rgb(58, 58, 64)
     } else {
-        look.chip
+        Color32::from_rgb(236, 236, 239)
+    };
+    let knob = if dark {
+        Color32::from_rgb(78, 78, 86)
+    } else {
+        Color32::WHITE
+    };
+    let ink = if dark {
+        Color32::from_rgb(245, 245, 247)
+    } else {
+        Color32::from_rgb(28, 28, 30)
+    };
+    let mute = if dark {
+        Color32::from_rgb(160, 160, 168)
+    } else {
+        Color32::from_rgb(120, 120, 128)
     };
     ui.painter()
-        .rect_filled(rect, egui::CornerRadius::same(13), fill);
-    ui.painter().galley(
-        egui::pos2(rect.left() + 8.0, rect.center().y - galley.size().y * 0.5),
-        galley,
-        Color32::WHITE,
+        .rect_filled(rect, egui::CornerRadius::same(10), track);
+    let half = rect.width() * 0.5;
+    let knob_rect = if dark {
+        egui::Rect::from_min_size(
+            rect.left_top() + Vec2::new(half, 0.0),
+            Vec2::new(half, rect.height()),
+        )
+    } else {
+        egui::Rect::from_min_size(rect.left_top(), Vec2::new(half, rect.height()))
+    };
+    ui.painter()
+        .rect_filled(knob_rect.shrink(3.0), egui::CornerRadius::same(8), knob);
+
+    let left =
+        egui::Rect::from_min_max(rect.left_top(), egui::pos2(rect.center().x, rect.bottom()));
+    let right =
+        egui::Rect::from_min_max(egui::pos2(rect.center().x, rect.top()), rect.right_bottom());
+    let light = ui.interact(left, Id::new("theme-light"), egui::Sense::click());
+    let dark_hit = ui.interact(right, Id::new("theme-dark"), egui::Sense::click());
+    ui.painter().text(
+        left.center(),
+        egui::Align2::CENTER_CENTER,
+        "浅色",
+        egui::FontId::proportional(13.0),
+        if dark { mute } else { ink },
     );
-    response.on_hover_cursor(CursorIcon::PointingHand)
+    ui.painter().text(
+        right.center(),
+        egui::Align2::CENTER_CENTER,
+        "深色",
+        egui::FontId::proportional(13.0),
+        if dark { ink } else { mute },
+    );
+    if light.clicked() && dark {
+        Some(false)
+    } else if dark_hit.clicked() && !dark {
+        Some(true)
+    } else {
+        None
+    }
 }
 
 fn assign_if_far(slot: &mut Option<f32>, value: f32) -> bool {
@@ -782,31 +1088,73 @@ impl eframe::App for SuishoujiApp {
             self.apply_level = false;
         }
 
-        let frame = egui::Frame::new()
-            .fill(self.look.panel)
-            .stroke(Stroke::new(1.0_f32, self.look.border))
-            .corner_radius(22)
-            .inner_margin(egui::Margin::same(14));
-        egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
-            self.title_bar(ui);
-            ui.add_space(4.0);
-            let full = ui.available_rect_before_wrap();
-            let footer_h = 118.0;
-            let footer_top = (full.bottom() - footer_h).max(full.top());
-            let footer_rect =
-                egui::Rect::from_min_max(egui::pos2(full.left(), footer_top), full.right_bottom());
-            let body_rect =
-                egui::Rect::from_min_max(full.left_top(), egui::pos2(full.right(), footer_top));
-            ui.allocate_new_ui(egui::UiBuilder::new().max_rect(body_rect), |ui| {
-                self.composer(ui);
-                ui.add_space(6.0);
-                self.list(ui);
+        let was_editing = self.editing.is_some();
+        let mut menu_hovered = false;
+        let mut paper_h = self.last_content_h;
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE)
+            .show(ctx, |ui| {
+                let mut body_top = 0.0;
+                let mut content_bottom = 0.0;
+                let card = egui::Frame::new()
+                    .fill(self.look.panel)
+                    .stroke(Stroke::new(1.0_f32, self.look.line))
+                    .corner_radius(16)
+                    .inner_margin(egui::Margin {
+                        left: 18,
+                        right: 12,
+                        top: 6,
+                        bottom: 10,
+                    })
+                    .show(ui, |ui| {
+                        if let Some(height) = self.user_height {
+                            ui.set_min_height((height - 8.0).max(MIN_H));
+                        }
+                        self.title_bar(ui);
+                        ui.add_space(8.0);
+                        body_top = ui.cursor().top();
+                        self.composer(ui);
+                        if let Some(err) = &self.save_error {
+                            ui.add_space(4.0);
+                            ui.label(
+                                RichText::new(format!("没能保存：{err}"))
+                                    .color(self.look.danger)
+                                    .size(12.0),
+                            );
+                        }
+                        self.list(ui);
+                        content_bottom = ui.min_rect().bottom();
+                    });
+                self.paint_paper(ui, card.response.rect, body_top, content_bottom);
+                paper_h = card
+                    .response
+                    .rect
+                    .height()
+                    .max(estimate_height(&self.state));
+                self.resize_handles(ui);
+                if self.menu_open {
+                    menu_hovered = self.appearance_menu(ui).hovered();
+                }
             });
-            ui.allocate_new_ui(egui::UiBuilder::new().max_rect(footer_rect), |ui| {
-                self.footer(ui);
-            });
-            self.resize_handles(ui);
+        self.hug_to_content(ctx, paper_h);
+        let (click, escape, pointer) = ctx.input(|input| {
+            (
+                input.pointer.any_click(),
+                input.key_pressed(egui::Key::Escape),
+                input.pointer.interact_pos(),
+            )
         });
+        let composer_focused = ctx.memory(|mem| mem.has_focus(Id::new("composer")));
+        if self.menu_open && !self.ignore_menu_click {
+            let on_button = pointer.is_some_and(|pos| self.menu_button.contains(pos));
+            let on_menu = pointer.is_some_and(|pos| self.menu_rect.contains(pos));
+            if (click && !menu_hovered && !on_menu && !on_button)
+                || (escape && !was_editing && !composer_focused)
+            {
+                self.menu_open = false;
+            }
+        }
+        self.ignore_menu_click = false;
 
         self.sync_geometry(ctx);
     }
