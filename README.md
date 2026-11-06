@@ -35,33 +35,30 @@
 
 ## 下载到 Windows
 
-仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。程序在分支 `cursor/note-surface-37dc`，不要下 `main`。
+仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。用分支 `cursor/note-surface-37dc`，不要下 `main`。
 
-1. 安装 Rust：打开 [https://rustup.rs](https://rustup.rs)，下载并运行 `rustup-init.exe`。安装时选默认的 MSVC 工具链。如果提示安装 Visual Studio C++ 生成工具，选是。
-2. 下载源码压缩包：  
-   [cursor/note-surface-37dc.zip](https://github.com/zxl123456123/-/archive/refs/heads/cursor/note-surface-37dc.zip)  
-   解压后进入那个文件夹。
-3. 在该文件夹打开 PowerShell，执行：
+已经编好 Windows 程序，拉下来双击即可，不必装 Rust。
 
-```powershell
-cargo run --release
-```
-
-第一次会编译几分钟。完成后窗口会直接出现。生成的程序在：
-
-```text
-target\release\suishouji.exe
-```
-
-以后可以只双击这个 exe，不必再开终端。发布版没有黑色控制台窗口。
-
-已经装了 Git 的话，也可以：
+已经装了 Git：
 
 ```powershell
 git clone -b cursor/note-surface-37dc https://github.com/zxl123456123/-.git suishouji
 cd suishouji
+.\dist\suishouji.exe
+```
+
+没有 Git 就下载这份压缩包，解压后双击 `dist\suishouji.exe`：  
+[cursor/note-surface-37dc.zip](https://github.com/zxl123456123/-/archive/refs/heads/cursor/note-surface-37dc.zip)
+
+也可以把 `dist\suishouji.exe` 拷到桌面，单独运行。发布版没有黑色控制台窗口。
+
+自己从源码编译的话，需要 Rust 1.88 或更新：
+
+```powershell
 cargo run --release
 ```
+
+生成的程序在 `target\release\suishouji.exe`。
 
 数据文件：
 
