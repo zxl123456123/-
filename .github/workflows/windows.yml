@@ -3,6 +3,7 @@ name: Windows exe
 on:
   push:
     branches:
+      - cursor/liquid-glass-37dc
       - cursor/note-surface-37dc
       - cursor/suishouji-transparent-todo-37dc
       - main

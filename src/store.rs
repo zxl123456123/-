@@ -122,9 +122,9 @@ mod tests {
         fs::write(&path, r#"{"todos":[{"id":7,"text":"旧数据"}]}"#).unwrap();
         let state = load_from(&path).unwrap();
         assert_eq!(state.todos[0].text, "旧数据");
-        assert!((state.opacity - 0.82).abs() < f32::EPSILON);
+        assert!((state.opacity - 0.58).abs() < f32::EPSILON);
         assert!(state.always_on_top);
-        assert!(state.dark);
+        assert!(!state.dark);
         assert!(state.next_id > 7);
         let _ = fs::remove_dir_all(&dir);
     }

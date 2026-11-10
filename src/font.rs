@@ -4,6 +4,7 @@
 //! 不把字体打进二进制，安装包才能保持轻。
 
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
 use std::process::Command;
 
 pub struct SystemFont {

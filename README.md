@@ -1,10 +1,12 @@
 # 随手记
 
-一块停在桌面上的待办窗口。无边框、可拖动、可调透明度，文字保持清晰，数据只写在本机。
+一块停在桌面上的待办窗口。无边框、可拖动、可调透明度，液态玻璃质感，文字保持清晰，数据只写在本机。
 
 ## 做什么
 
 - 输入后回车，或点左边的圆圈，新的在最上面
+- 这是今天的纸：没做完的会留到第二天，昨天已完成的不再占地方
+- 网页预览是一张液态玻璃纸条；外观仍在标题栏「···」里。桌面程序透过真桌面看过去
 - 纸条跟着待办收紧，底下不留一块空
 - 点圆圈完成，双击文字修改，拖左边的点排序
 - 透明度、深色在标题栏「···」里。透的是纸的底色，字不会一起淡掉
@@ -21,7 +23,8 @@
 
 版式参考的是产品，不是再铺一层控件：
 
-- 便笺和记事本：窗口贴着内容，不是一块固定高度的空卡片；左侧一条装订色，空出来的纸上才有浅线
+- 便笺和记事本：窗口贴着内容，不是一块固定高度的空卡片
+- 液态玻璃：四层叠加（backdrop 折射、着色、边缘高光、清晰文字），不是普通毛玻璃
 - [Things 3](https://culturedcode.com/things/)：纸面上几乎没有工具栏，待办是平的一行，完成的事项沉到列表底部
 - Windows 便笺，以及 [Glass Notes](https://github.com/psipher/GlassNotes)：颜色和透明度放在标题栏菜单里，不铺在正文下面
 - [HushNotes](https://hushnotes.app/)：淡下去的是纸，字保持清楚
@@ -35,24 +38,31 @@
 
 ## 网页预览
 
-想先看版式、先试记一条，打开 `web/index.html`，或把 `web` 文件夹丢进浏览器。这是页面预览，桌面版仍是独立窗口。
+想先看版式、先试记一条，打开 `web/index.html`，或把 `web` 文件夹丢进浏览器。网页用花墙纸把玻璃折射做出来；桌面版仍是独立透明窗口。
 
 ## 下载到 Windows
 
-仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。用分支 `cursor/note-surface-37dc`，不要下 `main`。
+仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。用分支 `cursor/liquid-glass-37dc`，不要下 `main`。
 
 已经编好 Windows 程序，拉下来双击即可，不必装 Rust。
+
+装到 E 盘并启动：
+
+```powershell
+New-Item -ItemType Directory -Force E:\suishouji | Out-Null
+Invoke-WebRequest -Uri "https://github.com/zxl123456123/-/raw/cursor/liquid-glass-37dc/dist/suishouji.exe" -OutFile E:\suishouji\suishouji.exe
+Start-Process E:\suishouji\suishouji.exe
+```
 
 已经装了 Git：
 
 ```powershell
-git clone -b cursor/note-surface-37dc https://github.com/zxl123456123/-.git suishouji
-cd suishouji
-.\dist\suishouji.exe
+git clone -b cursor/liquid-glass-37dc https://github.com/zxl123456123/-.git E:\suishouji
+E:\suishouji\dist\suishouji.exe
 ```
 
 没有 Git 就下载这份压缩包，解压后双击 `dist\suishouji.exe`：  
-[cursor/note-surface-37dc.zip](https://github.com/zxl123456123/-/archive/refs/heads/cursor/note-surface-37dc.zip)
+[cursor/liquid-glass-37dc.zip](https://github.com/zxl123456123/-/archive/refs/heads/cursor/liquid-glass-37dc.zip)
 
 也可以把 `dist\suishouji.exe` 拷到桌面，单独运行。发布版没有黑色控制台窗口。
 
@@ -89,6 +99,7 @@ SUISHOUJI_FONT=/path/to/font.ttf cargo run --release
 | 列表末尾「已完成 / 已收起」 | 收起或展开已完成 |
 | 「清除」 | 删掉已完成 |
 | 标题栏图钉 | 置顶 / 取消置顶 |
-| 标题栏「···」 | 调透明度、切换深色或浅色 |
-| 拖标题栏「随手记」 | 移动窗口 |
+| 标题栏「···」或底栏「外观」 | 调透明度 |
+| 底栏浅色 / 深色 | 切换玻璃着色 |
+| 拖标题栏日期 | 移动窗口 |
 | 拖窗口边缘 | 改变大小 |
