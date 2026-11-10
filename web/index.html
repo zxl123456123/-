@@ -3,22 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>随手记 · 液态玻璃</title>
+    <title>随手记</title>
     <style>
       :root {
         --ink: #16161c;
         --mute: rgba(22, 22, 28, 0.72);
-        --faint: rgba(22, 22, 28, 0.55);
+        --faint: rgba(22, 22, 28, 0.5);
         --accent: #0a84ff;
         --danger: #ff453a;
         --hover: rgba(255, 255, 255, 0.42);
         --tint: rgba(255, 255, 255, 0.36);
-        --ease: cubic-bezier(0.175, 0.885, 0.32, 2.2);
       }
       html.dark {
         --ink: #f5f3ee;
-        --mute: rgba(245, 243, 238, 0.62);
-        --faint: rgba(245, 243, 238, 0.42);
+        --mute: rgba(245, 243, 238, 0.68);
+        --faint: rgba(245, 243, 238, 0.45);
         --hover: rgba(255, 255, 255, 0.12);
         --tint: rgba(16, 18, 24, 0.42);
       }
@@ -35,30 +34,13 @@
         min-height: 100vh;
         color: var(--ink);
         overflow: hidden;
-        background-color: #f4b8c8;
-        background-image: url("flowers.jpg");
+        background-color: #16332c;
+        background-image: url("flowers.jpg"), url("wallpaper.svg");
         background-size: 520px;
-        background-position: 0 0;
         animation: drift 70s linear infinite;
       }
-      html.dark body {
-        background-color: #3a2030;
-        filter: none;
-      }
-      html.dark .wallpaper-dim {
-        opacity: 0.45;
-      }
-      .wallpaper-dim {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background: linear-gradient(
-          180deg,
-          rgba(20, 16, 24, 0) 40%,
-          rgba(20, 16, 24, 0.18) 100%
-        );
-        opacity: 0;
-        transition: opacity 0.35s ease;
+      [hidden] {
+        display: none !important;
       }
       @keyframes drift {
         from {
@@ -75,9 +57,6 @@
         box-shadow:
           0 6px 6px rgba(0, 0, 0, 0.2),
           0 0 20px rgba(0, 0, 0, 0.1);
-        transition:
-          padding 0.4s var(--ease),
-          border-radius 0.4s var(--ease);
       }
       .lg-fx,
       .lg-tint,
@@ -110,51 +89,23 @@
         z-index: 3;
       }
 
-      .top {
-        position: relative;
-        z-index: 4;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 18px 22px 0;
-      }
-      .banner {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        max-width: min(640px, calc(100vw - 180px));
-        padding: 10px 16px;
-        border-radius: 22px;
-      }
-      .banner p {
-        margin: 0;
-        font-size: 13px;
-        line-height: 1.4;
-        color: var(--ink);
-        text-shadow: 0 1px 8px rgba(255, 255, 255, 0.35);
-      }
-      .banner strong {
-        font-weight: 650;
-      }
       .download {
-        display: inline-flex;
-        align-items: center;
-        flex-shrink: 0;
-        padding: 12px 18px;
-        border-radius: 999px;
-        color: var(--ink);
+        position: absolute;
+        top: 18px;
+        right: 22px;
+        z-index: 4;
+        color: rgba(255, 255, 255, 0.92);
         text-decoration: none;
         font-size: 13px;
-        font-weight: 650;
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
       }
       .download:hover {
-        padding: 14px 20px;
+        text-decoration: underline;
       }
 
       .stage {
         position: relative;
-        min-height: calc(100vh - 86px);
+        min-height: 100vh;
       }
       .note {
         position: absolute;
@@ -181,7 +132,6 @@
         flex: 1;
         font-size: 15px;
         font-weight: 650;
-        letter-spacing: 0.01em;
       }
       .icon {
         width: 28px;
@@ -196,7 +146,6 @@
       }
       .icon:hover {
         background: var(--hover);
-        color: var(--ink);
         opacity: 1;
       }
       .icon.pin.on {
@@ -206,6 +155,7 @@
       .icon.close:hover {
         background: var(--danger);
         color: #fff;
+        opacity: 1;
       }
       .composer,
       .row {
@@ -248,7 +198,7 @@
         width: 18px;
         height: 18px;
         border-radius: 50%;
-        border: 1.5px solid rgba(22, 22, 28, 0.35);
+        border: 1.5px solid rgba(22, 22, 28, 0.4);
         background: rgba(255, 255, 255, 0.28);
         box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.7);
         padding: 0;
@@ -323,46 +273,9 @@
         font: inherit;
       }
 
-      .side {
-        position: absolute;
-        width: 210px;
-        padding: 8px;
-        border-radius: 28px;
-      }
-      .side,
-      .side > div {
-        border-radius: 28px;
-      }
-      .side .lg-body > button,
-      .side .lg-body > div {
-        display: block;
-        width: 100%;
-        border: 0;
-        background: transparent;
-        color: var(--ink);
-        text-align: left;
-        font: inherit;
-        font-size: 16px;
-        font-weight: 600;
-        padding: 10px 12px;
-        border-radius: 16px;
-        cursor: pointer;
-      }
-      .side .lg-body > div {
-        cursor: default;
-        color: var(--mute);
-        font-size: 13px;
-        font-weight: 500;
-        line-height: 1.45;
-      }
-      .side .lg-body > button:hover {
-        background: rgba(255, 255, 255, 0.5);
-        box-shadow: inset -2px -2px 2px rgba(0, 0, 0, 0.08);
-      }
-
       .menu {
         position: absolute;
-        width: 228px;
+        width: 220px;
         padding: 14px;
         border-radius: 28px;
         color: var(--ink);
@@ -370,9 +283,6 @@
       .menu,
       .menu > div {
         border-radius: 28px;
-      }
-      .menu[hidden] {
-        display: none;
       }
       .menu label {
         display: block;
@@ -384,74 +294,31 @@
         width: 100%;
         accent-color: var(--accent);
       }
-
-      .dock {
-        position: absolute;
-        left: 50%;
-        bottom: 28px;
-        transform: translateX(-50%);
+      .theme {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px;
-        border-radius: 32px;
-        z-index: 5;
+        margin-top: 4px;
+        border-radius: 10px;
+        background: var(--hover);
+        overflow: hidden;
       }
-      .dock,
-      .dock > div {
-        border-radius: 32px;
-      }
-      .dock:hover {
-        padding: 14px;
-        border-radius: 40px;
-      }
-      .dock:hover > div {
-        border-radius: 40px;
-      }
-      .chip {
-        position: relative;
-        z-index: 3;
-        min-width: 52px;
-        height: 52px;
-        padding: 0 8px;
+      .theme button {
+        flex: 1;
         border: 0;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.22);
-        box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.65);
-        color: var(--ink);
+        background: transparent;
+        color: var(--faint);
+        padding: 8px 0;
         cursor: pointer;
         font: inherit;
-        font-size: 12px;
-        font-weight: 650;
-        transition: transform 0.4s var(--ease);
       }
-      .chip:hover {
-        transform: scale(0.95);
-      }
-      .chip.on {
+      .theme button.on {
         background: rgba(255, 255, 255, 0.55);
-      }
-      html.dark .chip {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      html.dark .chip.on {
-        background: rgba(255, 255, 255, 0.22);
-      }
-      .hint {
-        position: absolute;
-        left: 50%;
-        bottom: 108px;
-        transform: translateX(-50%);
-        color: rgba(255, 255, 255, 0.92);
-        font-size: 13px;
-        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
-        pointer-events: none;
-        white-space: nowrap;
+        color: var(--ink);
+        border-radius: 8px;
+        margin: 3px;
       }
     </style>
   </head>
   <body>
-    <div class="wallpaper-dim"></div>
     <svg width="0" height="0" aria-hidden="true" style="position: absolute">
       <filter
         id="glass-distortion"
@@ -469,31 +336,7 @@
           seed="5"
           result="turbulence"
         />
-        <feComponentTransfer in="turbulence" result="mapped">
-          <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />
-          <feFuncG type="gamma" amplitude="0" exponent="1" offset="0" />
-          <feFuncB type="gamma" amplitude="0" exponent="1" offset="0.5" />
-        </feComponentTransfer>
         <feGaussianBlur in="turbulence" stdDeviation="3" result="softMap" />
-        <feSpecularLighting
-          in="softMap"
-          surfaceScale="5"
-          specularConstant="1"
-          specularExponent="100"
-          lighting-color="white"
-          result="specLight"
-        >
-          <fePointLight x="-200" y="-200" z="300" />
-        </feSpecularLighting>
-        <feComposite
-          in="specLight"
-          operator="arithmetic"
-          k1="0"
-          k2="1"
-          k3="1"
-          k4="0"
-          result="litImage"
-        />
         <feDisplacementMap
           in="SourceGraphic"
           in2="softMap"
@@ -504,31 +347,14 @@
       </filter>
     </svg>
 
-    <header class="top">
-      <div class="lg banner">
-        <div class="lg-fx"></div>
-        <div class="lg-tint"></div>
-        <div class="lg-shine"></div>
-        <div class="lg-body">
-          <p>
-            <strong>随手记 · 液态玻璃</strong><br />
-            四层玻璃：折射、着色、高光、文字。没做完的留下，昨天勾掉的不再占地方。
-          </p>
-        </div>
-      </div>
-      <a
-        class="lg download"
-        href="https://github.com/zxl123456123/-/raw/cursor/note-surface-37dc/dist/suishouji.exe"
-      >
-        <span class="lg-fx"></span>
-        <span class="lg-tint"></span>
-        <span class="lg-shine"></span>
-        <span class="lg-body">下载 Windows 程序</span>
-      </a>
-    </header>
+    <a
+      class="download"
+      href="https://github.com/zxl123456123/-/raw/cursor/note-surface-37dc/dist/suishouji.exe"
+      >下载 Windows 程序</a
+    >
 
     <div class="stage">
-      <article class="lg note" id="note" style="left: 72px; top: 28px">
+      <article class="lg note" id="note" style="left: 72px; top: 64px">
         <div class="lg-fx"></div>
         <div class="lg-tint"></div>
         <div class="lg-shine"></div>
@@ -556,43 +382,21 @@
         </div>
       </article>
 
-      <aside class="lg side" id="side" style="left: 468px; top: 48px">
-        <div class="lg-fx"></div>
-        <div class="lg-tint"></div>
-        <div class="lg-shine"></div>
-        <div class="lg-body">
-          <button type="button" id="focus-draft">记一条</button>
-          <button type="button" id="sweep-hint">今天的纸</button>
-          <button type="button" id="open-menu">外观</button>
-          <div>没做完的会留到第二天。昨天勾掉的，不再占今天的位置。</div>
-        </div>
-      </aside>
-
       <div class="lg menu" id="menu" hidden>
         <div class="lg-fx"></div>
         <div class="lg-tint"></div>
         <div class="lg-shine"></div>
         <div class="lg-body">
-          <label>透明度 <span id="pct">82%</span></label>
-          <input id="opacity" type="range" min="25" max="96" value="82" />
+          <label>透明度 <span id="pct">36%</span></label>
+          <input id="opacity" type="range" min="25" max="96" value="36" />
           <label style="margin-top: 12px">外观</label>
-          <p style="margin: 0; font-size: 13px; color: var(--mute); line-height: 1.45">
-            桌面程序透过真桌面看过去。网页用花墙纸把折射做出来给你看。
-          </p>
+          <div class="theme">
+            <button type="button" class="on" id="light">浅色</button>
+            <button type="button" id="dark">深色</button>
+          </div>
         </div>
       </div>
     </div>
-
-    <div class="lg dock" id="dock">
-      <div class="lg-fx"></div>
-      <div class="lg-tint"></div>
-      <div class="lg-shine"></div>
-      <button class="chip on" id="light" type="button">浅色</button>
-      <button class="chip" id="dark" type="button">深色</button>
-      <button class="chip on" id="dock-pin" type="button">置顶</button>
-      <button class="chip" id="dock-more" type="button">外观</button>
-    </div>
-    <p class="hint">拖标题移动纸条 · 点圆圈完成 · 底栏会像液态一样胀开</p>
 
     <script>
       const note = document.getElementById("note");
@@ -606,7 +410,7 @@
         items: [
           {
             id: 3,
-            text: "把透明度从记录区拿开",
+            text: "回邮件给设计",
             done: false,
             created: Date.now(),
             doneAt: 0,
@@ -620,7 +424,7 @@
           },
           {
             id: 1,
-            text: "回邮件给设计",
+            text: "把透明度从记录区拿开",
             done: true,
             created: Date.now(),
             doneAt: Date.now(),
@@ -643,10 +447,10 @@
       }
 
       function placeMenu() {
-        const rect = note.getBoundingClientRect();
+        const more = document.getElementById("more").getBoundingClientRect();
         const stage = document.querySelector(".stage").getBoundingClientRect();
-        menu.style.left = rect.right - stage.left - 12 + "px";
-        menu.style.top = rect.top - stage.top + 40 + "px";
+        menu.style.left = Math.max(8, more.right - stage.left - 220) + "px";
+        menu.style.top = more.bottom - stage.top + 8 + "px";
       }
 
       function row(item) {
@@ -689,7 +493,6 @@
       function render() {
         document.documentElement.classList.toggle("dark", state.dark);
         document.getElementById("pin").classList.toggle("on", state.pin);
-        document.getElementById("dock-pin").classList.toggle("on", state.pin);
         document.documentElement.style.setProperty(
           "--tint",
           state.dark
@@ -719,8 +522,7 @@
         if (showDone) {
           for (const item of done) doneBox.appendChild(row(item));
         }
-        const foot = document.getElementById("foot");
-        foot.hidden = done.length === 0;
+        document.getElementById("foot").hidden = done.length === 0;
         document.getElementById("toggle-done").textContent = state.hideDone
           ? "已收起 " + done.length
           : "已完成 " + done.length;
@@ -747,11 +549,6 @@
         input.focus();
       }
 
-      function toggleMenu() {
-        menu.hidden = !menu.hidden;
-        if (!menu.hidden) placeMenu();
-      }
-
       document.getElementById("add").addEventListener("click", add);
       document.getElementById("draft").addEventListener("keydown", (event) => {
         if (event.key === "Enter") add();
@@ -759,25 +556,8 @@
       });
       document.getElementById("more").addEventListener("click", (event) => {
         event.stopPropagation();
-        toggleMenu();
-      });
-      document.getElementById("dock-more").addEventListener("click", (event) => {
-        event.stopPropagation();
-        toggleMenu();
-      });
-      document.getElementById("open-menu").addEventListener("click", (event) => {
-        event.stopPropagation();
-        toggleMenu();
-      });
-      document.getElementById("focus-draft").addEventListener("click", () => {
-        document.getElementById("draft").focus();
-      });
-      document.getElementById("sweep-hint").addEventListener("click", () => {
-        const carry = document.getElementById("carry");
-        if (carry.hidden) {
-          carry.hidden = false;
-          carry.textContent = "这是今天的纸，没做完的会留下。";
-        }
+        menu.hidden = !menu.hidden;
+        if (!menu.hidden) placeMenu();
       });
       document.getElementById("opacity").addEventListener("input", (event) => {
         state.opacity = Number(event.target.value) / 100;
@@ -795,10 +575,6 @@
         state.pin = !state.pin;
         render();
       });
-      document.getElementById("dock-pin").addEventListener("click", () => {
-        state.pin = !state.pin;
-        render();
-      });
       document.getElementById("toggle-done").addEventListener("click", () => {
         state.hideDone = !state.hideDone;
         render();
@@ -808,13 +584,7 @@
         render();
       });
       document.addEventListener("click", (event) => {
-        if (
-          !menu.hidden &&
-          !menu.contains(event.target) &&
-          event.target.id !== "more" &&
-          event.target.id !== "dock-more" &&
-          event.target.id !== "open-menu"
-        ) {
+        if (!menu.hidden && !menu.contains(event.target) && event.target.id !== "more") {
           menu.hidden = true;
         }
       });
