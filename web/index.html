@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>随手记 · 网页预览</title>
+    <style>
+      :root {
+        --sky: #7eb4d4;
+        --hill: #6a7a3a;
+        --water: #3d8ea8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      body {
+        min-height: 100vh;
+        background:
+          radial-gradient(1200px 500px at 70% 8%, #cfe8f4 0%, transparent 55%),
+          linear-gradient(#8ec4e0 0 38%, #4f8aa3 38% 52%, #6d7c3e 52% 78%, #3f4a24 78% 100%);
+        overflow: hidden;
+      }
+      .water {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 36%;
+        height: 16%;
+        background: linear-gradient(#5aa0b8, #3d7f96);
+        opacity: 0.85;
+        pointer-events: none;
+      }
+      .banner {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 22px;
+        color: #f7f3ea;
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+      }
+      .banner p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .banner strong {
+        font-weight: 650;
+      }
+      .download {
+        flex-shrink: 0;
+        color: #3a2814;
+        background: #f6e2a8;
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font: inherit;
+        font-size: 13px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .download:hover {
+        background: #ffe9b0;
+      }
+      .stage {
+        position: relative;
+        z-index: 1;
+        min-height: calc(100vh - 64px);
+      }
+      .note {
+        position: absolute;
+        width: 360px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+        user-select: none;
+      }
+      .note.light {
+        --paper: rgba(255, 244, 210, var(--a));
+        --ink: rgb(52, 38, 22);
+        --faint: rgb(138, 112, 78);
+        --accent: rgb(196, 122, 36);
+        --line: rgba(92, 58, 20, 0.18);
+        --rail: rgb(232, 168, 64);
+        --hover: rgba(92, 58, 20, 0.08);
+        --danger: rgb(196, 64, 56);
+        --menu: #fff;
+      }
+      .note.dark {
+        --paper: rgba(36, 30, 24, var(--a));
+        --ink: rgb(247, 240, 230);
+        --faint: rgb(168, 154, 138);
+        --accent: rgb(232, 176, 92);
+        --line: rgba(255, 236, 210, 0.12);
+        --rail: rgb(214, 148, 64);
+        --hover: rgba(255, 236, 210, 0.08);
+        --danger: rgb(255, 114, 105);
+        --menu: rgb(44, 44, 48);
+      }
+      .rail {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        background: var(--rail);
+      }
+      .title {
+        display: flex;
+        align-items: center;
+        height: 36px;
+        padding: 0 10px 0 18px;
+        cursor: grab;
+      }
+      .title:active {
+        cursor: grabbing;
+      }
+      .title-name {
+        flex: 1;
+        font-size: 14px;
+        color: var(--ink);
+      }
+      .icon {
+        width: 26px;
+        height: 26px;
+        border: 0;
+        background: transparent;
+        color: var(--faint);
+        border-radius: 50%;
+        cursor: pointer;
+        font: inherit;
+      }
+      .icon:hover {
+        background: var(--hover);
+        color: var(--ink);
+      }
+      .icon.pin.on {
+        color: var(--accent);
+      }
+      .icon.close:hover {
+        background: var(--danger);
+        color: #fff;
+      }
+      .composer,
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 36px;
+        padding: 0 12px 0 18px;
+      }
+      .row:hover {
+        background: var(--hover);
+      }
+      .row:hover .del {
+        opacity: 1;
+      }
+      .grip {
+        width: 10px;
+        color: var(--line);
+        letter-spacing: -1px;
+        font-size: 11px;
+      }
+      .check {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1.4px solid var(--faint);
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+      }
+      .check.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 3px var(--paper);
+      }
+      input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        font-size: 16px;
+        outline: none;
+      }
+      input::placeholder {
+        color: var(--faint);
+      }
+      .label {
+        flex: 1;
+        min-width: 0;
+        font-size: 16px;
+        line-height: 1.3;
+      }
+      .label.done {
+        color: var(--faint);
+        text-decoration: line-through;
+      }
+      .del {
+        opacity: 0;
+        width: 22px;
+        border: 0;
+        background: transparent;
+        color: var(--faint);
+        cursor: pointer;
+        font-size: 16px;
+      }
+      .del:hover {
+        color: var(--danger);
+      }
+      .split {
+        margin: 6px 12px 4px 18px;
+        border: 0;
+        border-top: 1px solid var(--line);
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 14px 10px 18px;
+        color: var(--faint);
+        font-size: 12.5px;
+      }
+      .foot button {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+      }
+      .menu {
+        position: absolute;
+        top: 38px;
+        right: 36px;
+        width: 220px;
+        padding: 14px;
+        border-radius: 14px;
+        background: var(--menu);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+        z-index: 3;
+      }
+      .menu label {
+        display: block;
+        font-size: 12px;
+        color: var(--faint);
+        margin-bottom: 8px;
+      }
+      .menu input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+      .theme {
+        display: flex;
+        margin-top: 8px;
+        border-radius: 10px;
+        background: var(--hover);
+        overflow: hidden;
+      }
+      .theme button {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--faint);
+        padding: 8px 0;
+        cursor: pointer;
+        font: inherit;
+      }
+      .theme button.on {
+        background: color-mix(in srgb, var(--ink) 12%, transparent);
+        color: var(--ink);
+        border-radius: 8px;
+        margin: 3px;
+      }
+      .hint {
+        position: absolute;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        color: #f4efe6;
+        font-size: 13px;
+        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="water"></div>
+    <header class="banner">
+      <p>
+        <strong>随手记网页预览</strong><br />
+        这是浏览器里的样子，方便先看版式。桌面版是独立透明窗口，不占浏览器。
+      </p>
+      <a
+        class="download"
+        href="https://github.com/zxl123456123/-/raw/cursor/note-surface-37dc/dist/suishouji.exe"
+        >下载 Windows 程序</a
+      >
+    </header>
+    <div class="stage">
+      <article class="note light" id="note" style="--a: 0.94; left: 72px; top: 36px">
+        <div class="rail"></div>
+        <div class="title" id="drag">
+          <div class="title-name" id="title">随手记</div>
+          <button class="icon pin on" id="pin" title="置顶" aria-label="置顶">⌖</button>
+          <button class="icon" id="more" title="透明度、外观" aria-label="外观">···</button>
+          <button class="icon" title="最小化" aria-label="最小化">–</button>
+          <button class="icon close" title="关闭" aria-label="关闭">×</button>
+        </div>
+        <div class="composer">
+          <span class="grip">⋮</span>
+          <button class="check" id="add" title="记下来" aria-label="添加"></button>
+          <input id="draft" type="text" placeholder="记一件事，回车" autocomplete="off" />
+        </div>
+        <div id="open"></div>
+        <hr class="split" id="split" hidden />
+        <div id="done"></div>
+        <div class="foot" id="foot" hidden>
+          <button type="button" id="toggle-done">已完成 0</button>
+          <button type="button" id="clear">清除</button>
+        </div>
+        <div class="menu" id="menu" hidden>
+          <label>透明度 <span id="pct">94%</span></label>
+          <input id="opacity" type="range" min="25" max="96" value="94" />
+          <label>外观</label>
+          <div class="theme">
+            <button type="button" class="on" id="light">浅色</button>
+            <button type="button" id="dark">深色</button>
+          </div>
+        </div>
+      </article>
+    </div>
+    <p class="hint">拖标题移动纸条 · 点圆圈完成 · ··· 里调透明度和深浅色</p>
+    <script>
+      const note = document.getElementById("note");
+      const state = {
+        dark: false,
+        opacity: 0.94,
+        pin: true,
+        hideDone: false,
+        nextId: 4,
+        items: [
+          { id: 3, text: "把透明度从记录区拿开", done: false },
+          { id: 2, text: "买牛奶", done: false },
+          { id: 1, text: "回邮件给设计", done: true },
+        ],
+      };
+
+      function row(item) {
+        const wrap = document.createElement("div");
+        wrap.className = "row";
+        const grip = document.createElement("span");
+        grip.className = "grip";
+        grip.textContent = "⋮";
+        const check = document.createElement("button");
+        check.className = "check" + (item.done ? " on" : "");
+        check.type = "button";
+        check.addEventListener("click", () => {
+          item.done = !item.done;
+          render();
+        });
+        const label = document.createElement("div");
+        label.className = "label" + (item.done ? " done" : "");
+        label.textContent = item.text;
+        label.title = "双击修改";
+        label.addEventListener("dblclick", () => {
+          const next = window.prompt("改一下", item.text);
+          if (next && next.trim()) {
+            item.text = next.trim().slice(0, 2000);
+            render();
+          }
+        });
+        const del = document.createElement("button");
+        del.className = "del";
+        del.type = "button";
+        del.textContent = "×";
+        del.addEventListener("click", () => {
+          state.items = state.items.filter((todo) => todo.id !== item.id);
+          render();
+        });
+        wrap.append(grip, check, label, del);
+        return wrap;
+      }
+
+      function render() {
+        note.classList.toggle("dark", state.dark);
+        note.classList.toggle("light", !state.dark);
+        note.style.setProperty("--a", String(state.opacity));
+        document.getElementById("pin").classList.toggle("on", state.pin);
+        const open = state.items.filter((item) => !item.done);
+        const done = state.items.filter((item) => item.done);
+        document.getElementById("title").textContent =
+          open.length === 0 ? "随手记" : "随手记  ·  " + open.length;
+        const openBox = document.getElementById("open");
+        const doneBox = document.getElementById("done");
+        openBox.replaceChildren();
+        doneBox.replaceChildren();
+        for (const item of open) openBox.appendChild(row(item));
+        const showDone = done.length > 0 && !state.hideDone;
+        document.getElementById("split").hidden = !showDone;
+        if (showDone) {
+          for (const item of done) doneBox.appendChild(row(item));
+        }
+        const foot = document.getElementById("foot");
+        foot.hidden = done.length === 0;
+        document.getElementById("toggle-done").textContent = state.hideDone
+          ? "已收起 " + done.length
+          : "已完成 " + done.length;
+        document.getElementById("pct").textContent = Math.round(state.opacity * 100) + "%";
+        document.getElementById("light").classList.toggle("on", !state.dark);
+        document.getElementById("dark").classList.toggle("on", state.dark);
+      }
+
+      function add() {
+        const input = document.getElementById("draft");
+        const text = input.value.trim();
+        if (!text) return;
+        state.items.unshift({
+          id: state.nextId++,
+          text: text.slice(0, 2000),
+          done: false,
+        });
+        input.value = "";
+        render();
+        input.focus();
+      }
+
+      document.getElementById("add").addEventListener("click", add);
+      document.getElementById("draft").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") add();
+        if (event.key === "Escape") document.getElementById("draft").value = "";
+      });
+      document.getElementById("more").addEventListener("click", (event) => {
+        event.stopPropagation();
+        const menu = document.getElementById("menu");
+        menu.hidden = !menu.hidden;
+      });
+      document.getElementById("opacity").addEventListener("input", (event) => {
+        state.opacity = Number(event.target.value) / 100;
+        render();
+      });
+      document.getElementById("light").addEventListener("click", () => {
+        state.dark = false;
+        render();
+      });
+      document.getElementById("dark").addEventListener("click", () => {
+        state.dark = true;
+        render();
+      });
+      document.getElementById("pin").addEventListener("click", () => {
+        state.pin = !state.pin;
+        render();
+      });
+      document.getElementById("toggle-done").addEventListener("click", () => {
+        state.hideDone = !state.hideDone;
+        render();
+      });
+      document.getElementById("clear").addEventListener("click", () => {
+        state.items = state.items.filter((item) => !item.done);
+        render();
+      });
+      document.addEventListener("click", (event) => {
+        const menu = document.getElementById("menu");
+        if (!menu.hidden && !menu.contains(event.target) && event.target.id !== "more") {
+          menu.hidden = true;
+        }
+      });
+
+      let drag = null;
+      document.getElementById("drag").addEventListener("pointerdown", (event) => {
+        if (event.target.closest("button")) return;
+        drag = {
+          x: event.clientX - note.offsetLeft,
+          y: event.clientY - note.offsetTop,
+        };
+        event.target.setPointerCapture(event.pointerId);
+      });
+      document.getElementById("drag").addEventListener("pointermove", (event) => {
+        if (!drag) return;
+        note.style.left = Math.max(8, event.clientX - drag.x) + "px";
+        note.style.top = Math.max(8, event.clientY - drag.y) + "px";
+      });
+      document.getElementById("drag").addEventListener("pointerup", () => {
+        drag = null;
+      });
+
+      render();
+    </script>
+  </body>
+</html>
