@@ -33,6 +33,10 @@
 - 渲染固定 Glow。Windows 上 wgpu 的透明窗口经常变成黑底，或把控件也一起变淡
 - 待办规则和 JSON 读写跟界面分开，不打开窗口也能测
 
+## 网页预览
+
+想先看版式、先试记一条，打开 `web/index.html`，或把 `web` 文件夹丢进浏览器。这是页面预览，桌面版仍是独立窗口。
+
 ## 下载到 Windows
 
 仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。用分支 `cursor/note-surface-37dc`，不要下 `main`。
