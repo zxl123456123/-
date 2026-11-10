@@ -7,12 +7,12 @@
     <style>
       :root {
         --ink: #16161c;
-        --mute: rgba(22, 22, 28, 0.58);
-        --faint: rgba(22, 22, 28, 0.42);
+        --mute: rgba(22, 22, 28, 0.72);
+        --faint: rgba(22, 22, 28, 0.55);
         --accent: #0a84ff;
         --danger: #ff453a;
         --hover: rgba(255, 255, 255, 0.42);
-        --tint: rgba(255, 255, 255, 0.28);
+        --tint: rgba(255, 255, 255, 0.36);
         --ease: cubic-bezier(0.175, 0.885, 0.32, 2.2);
       }
       html.dark {
@@ -188,7 +188,8 @@
         height: 28px;
         border: 0;
         background: transparent;
-        color: var(--mute);
+        color: var(--ink);
+        opacity: 0.72;
         border-radius: 50%;
         cursor: pointer;
         font: inherit;
@@ -196,9 +197,11 @@
       .icon:hover {
         background: var(--hover);
         color: var(--ink);
+        opacity: 1;
       }
       .icon.pin.on {
         color: var(--accent);
+        opacity: 1;
       }
       .icon.close:hover {
         background: var(--danger);
@@ -437,7 +440,7 @@
       .hint {
         position: absolute;
         left: 50%;
-        bottom: 96px;
+        bottom: 108px;
         transform: translateX(-50%);
         color: rgba(255, 255, 255, 0.92);
         font-size: 13px;
@@ -596,7 +599,7 @@
       const menu = document.getElementById("menu");
       const state = {
         dark: false,
-        opacity: 0.28,
+        opacity: 0.36,
         pin: true,
         hideDone: false,
         nextId: 4,
@@ -771,8 +774,10 @@
       });
       document.getElementById("sweep-hint").addEventListener("click", () => {
         const carry = document.getElementById("carry");
-        carry.hidden = false;
-        carry.textContent = "这是今天的纸，没做完的会留下。";
+        if (carry.hidden) {
+          carry.hidden = false;
+          carry.textContent = "这是今天的纸，没做完的会留下。";
+        }
       });
       document.getElementById("opacity").addEventListener("input", (event) => {
         state.opacity = Number(event.target.value) / 100;
