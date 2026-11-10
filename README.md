@@ -42,20 +42,27 @@
 
 ## 下载到 Windows
 
-仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。用分支 `cursor/note-surface-37dc`，不要下 `main`。
+仓库地址：[github.com/zxl123456123/-](https://github.com/zxl123456123/-)。用分支 `cursor/liquid-glass-37dc`，不要下 `main`。
 
 已经编好 Windows 程序，拉下来双击即可，不必装 Rust。
+
+装到 E 盘并启动：
+
+```powershell
+New-Item -ItemType Directory -Force E:\suishouji | Out-Null
+Invoke-WebRequest -Uri "https://github.com/zxl123456123/-/raw/cursor/liquid-glass-37dc/dist/suishouji.exe" -OutFile E:\suishouji\suishouji.exe
+Start-Process E:\suishouji\suishouji.exe
+```
 
 已经装了 Git：
 
 ```powershell
-git clone -b cursor/note-surface-37dc https://github.com/zxl123456123/-.git suishouji
-cd suishouji
-.\dist\suishouji.exe
+git clone -b cursor/liquid-glass-37dc https://github.com/zxl123456123/-.git E:\suishouji
+E:\suishouji\dist\suishouji.exe
 ```
 
 没有 Git 就下载这份压缩包，解压后双击 `dist\suishouji.exe`：  
-[cursor/note-surface-37dc.zip](https://github.com/zxl123456123/-/archive/refs/heads/cursor/note-surface-37dc.zip)
+[cursor/liquid-glass-37dc.zip](https://github.com/zxl123456123/-/archive/refs/heads/cursor/liquid-glass-37dc.zip)
 
 也可以把 `dist\suishouji.exe` 拷到桌面，单独运行。发布版没有黑色控制台窗口。
 
