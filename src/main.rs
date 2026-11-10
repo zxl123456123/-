@@ -1,7 +1,8 @@
-//! 随手记：一张可以调透明度的桌面纸条。
+//! 随手记：一张可以调透明度的桌面玻璃。
 //!
-//! 窗口行为参考 floating-todo（无边框、透明、置顶、透明度只铺在纸上）。
+//! 窗口行为参考 floating-todo（无边框、透明、置顶、透明度只铺在面板上）。
 //! 纸条跟着内容收紧，不铺一块空底。外观收在标题栏里。
+//! 桌面版透过真桌面看过去；网页预览用四层液态玻璃把折射做出来。
 //! 渲染固定用 Glow：Windows 上 wgpu 经常把透明窗口画成黑底，或者连文字一起变淡。
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -16,7 +17,7 @@ const MIN_W: f32 = 300.0;
 const MIN_H: f32 = 168.0;
 const MAX_H: f32 = 560.0;
 const ROW_H: f32 = 36.0;
-const RAIL_W: f32 = 5.0;
+const GLASS_R: u8 = 28;
 
 fn main() -> eframe::Result {
     let state = suishouji::load();
@@ -106,8 +107,7 @@ struct Look {
     faint: Color32,
     accent: Color32,
     line: Color32,
-    rule: Color32,
-    rail: Color32,
+    shine: Color32,
     hover: Color32,
     danger: Color32,
     dark: bool,
@@ -117,28 +117,26 @@ fn look_of(state: &AppState) -> Look {
     let alpha = (state.opacity.clamp(0.25, 0.96) * 255.0).round() as u8;
     if state.dark {
         Look {
-            panel: Color32::from_rgba_unmultiplied(36, 30, 24, alpha),
-            text: Color32::from_rgb(247, 240, 230),
-            faint: Color32::from_rgb(168, 154, 138),
-            accent: Color32::from_rgb(232, 176, 92),
-            line: Color32::from_rgba_unmultiplied(255, 236, 210, 28),
-            rule: Color32::from_rgba_unmultiplied(255, 228, 196, 22),
-            rail: Color32::from_rgb(214, 148, 64),
-            hover: Color32::from_rgba_unmultiplied(255, 236, 210, 18),
-            danger: Color32::from_rgb(255, 114, 105),
+            panel: Color32::from_rgba_unmultiplied(22, 24, 30, alpha),
+            text: Color32::from_rgb(245, 243, 238),
+            faint: Color32::from_rgb(168, 174, 188),
+            accent: Color32::from_rgb(10, 132, 255),
+            line: Color32::from_rgba_unmultiplied(255, 255, 255, 48),
+            shine: Color32::from_rgba_unmultiplied(255, 255, 255, 90),
+            hover: Color32::from_rgba_unmultiplied(255, 255, 255, 22),
+            danger: Color32::from_rgb(255, 69, 58),
             dark: true,
         }
     } else {
         Look {
-            panel: Color32::from_rgba_unmultiplied(255, 244, 210, alpha),
-            text: Color32::from_rgb(52, 38, 22),
-            faint: Color32::from_rgb(138, 112, 78),
-            accent: Color32::from_rgb(196, 122, 36),
-            line: Color32::from_rgba_unmultiplied(92, 58, 20, 28),
-            rule: Color32::from_rgba_unmultiplied(176, 132, 64, 38),
-            rail: Color32::from_rgb(232, 168, 64),
-            hover: Color32::from_rgba_unmultiplied(92, 58, 20, 14),
-            danger: Color32::from_rgb(196, 64, 56),
+            panel: Color32::from_rgba_unmultiplied(255, 255, 255, alpha),
+            text: Color32::from_rgb(22, 22, 28),
+            faint: Color32::from_rgb(90, 96, 110),
+            accent: Color32::from_rgb(10, 132, 255),
+            line: Color32::from_rgba_unmultiplied(255, 255, 255, 110),
+            shine: Color32::from_rgba_unmultiplied(255, 255, 255, 160),
+            hover: Color32::from_rgba_unmultiplied(255, 255, 255, 56),
+            danger: Color32::from_rgb(255, 69, 58),
             dark: false,
         }
     }
@@ -151,7 +149,12 @@ fn estimate_height(state: &AppState) -> f32 {
         state.todos.len()
     };
     let done_bar = if state.done_count() > 0 { 40.0 } else { 8.0 };
-    (52.0 + ROW_H * (visible as f32 + 1.0) + done_bar).clamp(MIN_H, MAX_H)
+    let leftover = if state.leftover_count() > 0 {
+        18.0
+    } else {
+        0.0
+    };
+    (52.0 + ROW_H * (visible as f32 + 1.0) + done_bar + leftover).clamp(MIN_H, MAX_H)
 }
 
 struct SuishoujiApp {
@@ -171,6 +174,7 @@ struct SuishoujiApp {
     ignore_menu_click: bool,
     user_height: Option<f32>,
     last_content_h: f32,
+    day_key: i32,
 }
 
 impl SuishoujiApp {
@@ -194,6 +198,7 @@ impl SuishoujiApp {
             ignore_menu_click: false,
             user_height: None,
             last_content_h,
+            day_key: suishouji::today_day_key(),
         }
     }
 
@@ -286,10 +291,11 @@ impl SuishoujiApp {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
                 let open = self.state.open_count();
+                let date = suishouji::today_label();
                 let title = if open == 0 {
-                    "随手记".to_owned()
+                    date
                 } else {
-                    format!("随手记  ·  {open}")
+                    format!("{date}  ·  {open}")
                 };
                 ui.painter().text(
                     drag.rect.left_center() + Vec2::new(8.0, 0.0),
@@ -404,7 +410,7 @@ impl SuishoujiApp {
                         } else {
                             Color32::TRANSPARENT
                         })
-                        .corner_radius(8)
+                        .corner_radius(14)
                         .inner_margin(egui::Margin::symmetric(2, 4))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
@@ -588,14 +594,14 @@ impl SuishoujiApp {
             egui::Sense::click(),
         );
         let sheet = if self.look.dark {
-            Color32::from_rgb(44, 44, 48)
+            Color32::from_rgba_unmultiplied(28, 30, 36, 210)
         } else {
-            Color32::from_rgb(255, 255, 255)
+            Color32::from_rgba_unmultiplied(255, 255, 255, 210)
         };
         let inner = egui::Frame::new()
             .fill(sheet)
-            .stroke(Stroke::new(1.0_f32, self.look.line))
-            .corner_radius(14)
+            .stroke(Stroke::new(1.0_f32, self.look.shine))
+            .corner_radius(22)
             .inner_margin(egui::Margin::same(14))
             .shadow(egui::Shadow {
                 offset: [0, 8],
@@ -641,35 +647,27 @@ impl SuishoujiApp {
         ui: &mut egui::Ui,
         paper: egui::Rect,
         body_top: f32,
-        content_bottom: f32,
+        _content_bottom: f32,
     ) {
         let painter = ui.painter();
-        let rail = egui::Rect::from_min_max(
-            paper.left_top() + Vec2::new(1.0, 1.0),
-            egui::pos2(paper.left() + 1.0 + RAIL_W, paper.bottom() - 1.0),
+        let radius = egui::CornerRadius::same(GLASS_R);
+        painter.rect_stroke(
+            paper.shrink(1.0),
+            radius,
+            Stroke::new(1.4_f32, self.look.shine),
+            egui::StrokeKind::Inside,
         );
-        painter.rect_filled(
-            rail,
-            egui::CornerRadius {
-                nw: 16,
-                ne: 0,
-                sw: 16,
-                se: 0,
-            },
-            self.look.rail,
+        painter.rect_stroke(
+            paper.shrink(2.2),
+            radius,
+            Stroke::new(1.0_f32, Color32::from_white_alpha(28)),
+            egui::StrokeKind::Inside,
         );
         painter.hline(
-            (paper.left() + RAIL_W + 8.0)..=(paper.right() - 12.0),
+            (paper.left() + 18.0)..=(paper.right() - 16.0),
             body_top - 4.0,
             Stroke::new(1.0_f32, self.look.line),
         );
-        let left = paper.left() + 48.0;
-        let right = paper.right() - 16.0;
-        let mut y = content_bottom + 2.0;
-        while y < paper.bottom() - 10.0 {
-            painter.hline(left..=right, y, Stroke::new(1.0_f32, self.look.rule));
-            y += ROW_H;
-        }
     }
 
     fn hug_to_content(&mut self, ctx: &egui::Context, paper_h: f32) {
@@ -1088,6 +1086,14 @@ impl eframe::App for SuishoujiApp {
             self.apply_level = false;
         }
 
+        let today = suishouji::today_day_key();
+        if today != self.day_key {
+            if self.state.sweep_done_before(today) > 0 {
+                self.persist_now();
+            }
+            self.day_key = today;
+        }
+
         let was_editing = self.editing.is_some();
         let mut menu_hovered = false;
         let mut paper_h = self.last_content_h;
@@ -1098,8 +1104,8 @@ impl eframe::App for SuishoujiApp {
                 let mut content_bottom = 0.0;
                 let card = egui::Frame::new()
                     .fill(self.look.panel)
-                    .stroke(Stroke::new(1.0_f32, self.look.line))
-                    .corner_radius(16)
+                    .stroke(Stroke::new(1.0_f32, self.look.shine))
+                    .corner_radius(GLASS_R)
                     .inner_margin(egui::Margin {
                         left: 18,
                         right: 12,
@@ -1114,6 +1120,14 @@ impl eframe::App for SuishoujiApp {
                         ui.add_space(8.0);
                         body_top = ui.cursor().top();
                         self.composer(ui);
+                        let leftover = self.state.leftover_count();
+                        if leftover > 0 {
+                            ui.label(
+                                RichText::new(format!("{leftover} 件是以前留下的"))
+                                    .color(self.look.faint)
+                                    .size(12.0),
+                            );
+                        }
                         if let Some(err) = &self.save_error {
                             ui.add_space(4.0);
                             ui.label(

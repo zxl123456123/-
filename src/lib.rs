@@ -5,5 +5,5 @@ mod model;
 mod store;
 
 pub use font::{load_system_font, SystemFont};
-pub use model::AppState;
+pub use model::{today_day_key, today_label, AppState};
 pub use store::{load, load_from, notes_path, save, save_to};

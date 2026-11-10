@@ -3,12 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>随手记 · 网页预览</title>
+    <title>随手记 · 液态玻璃</title>
     <style>
       :root {
-        --sky: #7eb4d4;
-        --hill: #6a7a3a;
-        --water: #3d8ea8;
+        --ink: #16161c;
+        --mute: rgba(22, 22, 28, 0.58);
+        --faint: rgba(22, 22, 28, 0.42);
+        --accent: #0a84ff;
+        --danger: #ff453a;
+        --hover: rgba(255, 255, 255, 0.42);
+        --tint: rgba(255, 255, 255, 0.28);
+        --ease: cubic-bezier(0.175, 0.885, 0.32, 2.2);
+      }
+      html.dark {
+        --ink: #f5f3ee;
+        --mute: rgba(245, 243, 238, 0.62);
+        --faint: rgba(245, 243, 238, 0.42);
+        --hover: rgba(255, 255, 255, 0.12);
+        --tint: rgba(16, 18, 24, 0.42);
       }
       * {
         box-sizing: border-box;
@@ -17,109 +29,149 @@
       body {
         margin: 0;
         min-height: 100%;
-        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family: "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       }
       body {
         min-height: 100vh;
-        background:
-          radial-gradient(1200px 500px at 70% 8%, #cfe8f4 0%, transparent 55%),
-          linear-gradient(#8ec4e0 0 38%, #4f8aa3 38% 52%, #6d7c3e 52% 78%, #3f4a24 78% 100%);
+        color: var(--ink);
         overflow: hidden;
+        background-color: #f4b8c8;
+        background-image: url("flowers.jpg");
+        background-size: 520px;
+        background-position: 0 0;
+        animation: drift 70s linear infinite;
       }
-      .water {
+      html.dark body {
+        background-color: #3a2030;
+        filter: none;
+      }
+      html.dark .wallpaper-dim {
+        opacity: 0.45;
+      }
+      .wallpaper-dim {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(
+          180deg,
+          rgba(20, 16, 24, 0) 40%,
+          rgba(20, 16, 24, 0.18) 100%
+        );
+        opacity: 0;
+        transition: opacity 0.35s ease;
+      }
+      @keyframes drift {
+        from {
+          background-position: 0 0;
+        }
+        to {
+          background-position: 0 -520px;
+        }
+      }
+
+      .lg {
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+          0 6px 6px rgba(0, 0, 0, 0.2),
+          0 0 20px rgba(0, 0, 0, 0.1);
+        transition:
+          padding 0.4s var(--ease),
+          border-radius 0.4s var(--ease);
+      }
+      .lg-fx,
+      .lg-tint,
+      .lg-shine {
         position: absolute;
-        left: 0;
-        right: 0;
-        top: 36%;
-        height: 16%;
-        background: linear-gradient(#5aa0b8, #3d7f96);
-        opacity: 0.85;
+        inset: 0;
+        border-radius: inherit;
         pointer-events: none;
       }
-      .banner {
-        position: relative;
+      .lg-fx {
+        z-index: 0;
+        overflow: hidden;
+        isolation: isolate;
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        filter: url(#glass-distortion);
+      }
+      .lg-tint {
+        z-index: 1;
+        background: var(--tint);
+      }
+      .lg-shine {
         z-index: 2;
+        box-shadow:
+          inset 2px 2px 1px 0 rgba(255, 255, 255, 0.55),
+          inset -1px -1px 1px 1px rgba(255, 255, 255, 0.45);
+      }
+      .lg-body {
+        position: relative;
+        z-index: 3;
+      }
+
+      .top {
+        position: relative;
+        z-index: 4;
         display: flex;
-        gap: 12px;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 22px;
-        color: #f7f3ea;
-        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+        gap: 16px;
+        padding: 18px 22px 0;
+      }
+      .banner {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        max-width: min(640px, calc(100vw - 180px));
+        padding: 10px 16px;
+        border-radius: 22px;
       }
       .banner p {
         margin: 0;
-        font-size: 14px;
-        line-height: 1.45;
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--ink);
+        text-shadow: 0 1px 8px rgba(255, 255, 255, 0.35);
       }
       .banner strong {
         font-weight: 650;
       }
       .download {
+        display: inline-flex;
+        align-items: center;
         flex-shrink: 0;
-        color: #3a2814;
-        background: #f6e2a8;
-        border: 0;
+        padding: 12px 18px;
         border-radius: 999px;
-        padding: 8px 14px;
-        font: inherit;
-        font-size: 13px;
+        color: var(--ink);
         text-decoration: none;
-        cursor: pointer;
+        font-size: 13px;
+        font-weight: 650;
       }
       .download:hover {
-        background: #ffe9b0;
+        padding: 14px 20px;
       }
+
       .stage {
         position: relative;
-        z-index: 1;
-        min-height: calc(100vh - 64px);
+        min-height: calc(100vh - 86px);
       }
       .note {
         position: absolute;
-        width: 360px;
-        border-radius: 16px;
-        overflow: hidden;
-        border: 1px solid var(--line);
-        background: var(--paper);
+        width: 372px;
+        border-radius: 32px;
         color: var(--ink);
         user-select: none;
       }
-      .note.light {
-        --paper: rgba(255, 244, 210, var(--a));
-        --ink: rgb(52, 38, 22);
-        --faint: rgb(138, 112, 78);
-        --accent: rgb(196, 122, 36);
-        --line: rgba(92, 58, 20, 0.18);
-        --rail: rgb(232, 168, 64);
-        --hover: rgba(92, 58, 20, 0.08);
-        --danger: rgb(196, 64, 56);
-        --menu: #fff;
-      }
-      .note.dark {
-        --paper: rgba(36, 30, 24, var(--a));
-        --ink: rgb(247, 240, 230);
-        --faint: rgb(168, 154, 138);
-        --accent: rgb(232, 176, 92);
-        --line: rgba(255, 236, 210, 0.12);
-        --rail: rgb(214, 148, 64);
-        --hover: rgba(255, 236, 210, 0.08);
-        --danger: rgb(255, 114, 105);
-        --menu: rgb(44, 44, 48);
-      }
-      .rail {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 5px;
-        background: var(--rail);
+      .note,
+      .note > div {
+        border-radius: 32px;
       }
       .title {
         display: flex;
         align-items: center;
-        height: 36px;
-        padding: 0 10px 0 18px;
+        height: 44px;
+        padding: 4px 10px 0 18px;
         cursor: grab;
       }
       .title:active {
@@ -127,15 +179,16 @@
       }
       .title-name {
         flex: 1;
-        font-size: 14px;
-        color: var(--ink);
+        font-size: 15px;
+        font-weight: 650;
+        letter-spacing: 0.01em;
       }
       .icon {
-        width: 26px;
-        height: 26px;
+        width: 28px;
+        height: 28px;
         border: 0;
         background: transparent;
-        color: var(--faint);
+        color: var(--mute);
         border-radius: 50%;
         cursor: pointer;
         font: inherit;
@@ -156,8 +209,22 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        min-height: 36px;
-        padding: 0 12px 0 18px;
+        min-height: 40px;
+        padding: 0 14px 0 18px;
+      }
+      .composer {
+        margin: 4px 12px 8px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.22);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      }
+      html.dark .composer {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .row {
+        border-radius: 16px;
+        margin: 0 8px;
       }
       .row:hover {
         background: var(--hover);
@@ -167,23 +234,31 @@
       }
       .grip {
         width: 10px;
-        color: var(--line);
+        color: rgba(22, 22, 28, 0.28);
         letter-spacing: -1px;
         font-size: 11px;
+      }
+      html.dark .grip {
+        color: rgba(255, 255, 255, 0.28);
       }
       .check {
         width: 18px;
         height: 18px;
         border-radius: 50%;
-        border: 1.4px solid var(--faint);
-        background: transparent;
+        border: 1.5px solid rgba(22, 22, 28, 0.35);
+        background: rgba(255, 255, 255, 0.28);
+        box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.7);
         padding: 0;
         cursor: pointer;
+      }
+      html.dark .check {
+        border-color: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.08);
       }
       .check.on {
         background: var(--accent);
         border-color: var(--accent);
-        box-shadow: inset 0 0 0 3px var(--paper);
+        box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35);
       }
       input[type="text"] {
         flex: 1;
@@ -220,16 +295,21 @@
       .del:hover {
         color: var(--danger);
       }
+      .carry {
+        padding: 0 22px 8px;
+        font-size: 12px;
+        color: var(--mute);
+      }
       .split {
-        margin: 6px 12px 4px 18px;
+        margin: 8px 18px 4px;
         border: 0;
-        border-top: 1px solid var(--line);
+        border-top: 1px solid rgba(255, 255, 255, 0.35);
       }
       .foot {
         display: flex;
         justify-content: space-between;
-        padding: 4px 14px 10px 18px;
-        color: var(--faint);
+        padding: 6px 18px 16px;
+        color: var(--mute);
         font-size: 12.5px;
       }
       .foot button {
@@ -239,124 +319,332 @@
         cursor: pointer;
         font: inherit;
       }
+
+      .side {
+        position: absolute;
+        width: 210px;
+        padding: 8px;
+        border-radius: 28px;
+      }
+      .side,
+      .side > div {
+        border-radius: 28px;
+      }
+      .side .lg-body > button,
+      .side .lg-body > div {
+        display: block;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        text-align: left;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 600;
+        padding: 10px 12px;
+        border-radius: 16px;
+        cursor: pointer;
+      }
+      .side .lg-body > div {
+        cursor: default;
+        color: var(--mute);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.45;
+      }
+      .side .lg-body > button:hover {
+        background: rgba(255, 255, 255, 0.5);
+        box-shadow: inset -2px -2px 2px rgba(0, 0, 0, 0.08);
+      }
+
       .menu {
         position: absolute;
-        top: 38px;
-        right: 36px;
-        width: 220px;
+        width: 228px;
         padding: 14px;
-        border-radius: 14px;
-        background: var(--menu);
+        border-radius: 28px;
         color: var(--ink);
-        border: 1px solid var(--line);
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
-        z-index: 3;
+      }
+      .menu,
+      .menu > div {
+        border-radius: 28px;
+      }
+      .menu[hidden] {
+        display: none;
       }
       .menu label {
         display: block;
         font-size: 12px;
-        color: var(--faint);
+        color: var(--mute);
         margin-bottom: 8px;
       }
       .menu input[type="range"] {
         width: 100%;
         accent-color: var(--accent);
       }
-      .theme {
+
+      .dock {
+        position: absolute;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
         display: flex;
-        margin-top: 8px;
-        border-radius: 10px;
-        background: var(--hover);
-        overflow: hidden;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 32px;
+        z-index: 5;
       }
-      .theme button {
-        flex: 1;
+      .dock,
+      .dock > div {
+        border-radius: 32px;
+      }
+      .dock:hover {
+        padding: 14px;
+        border-radius: 40px;
+      }
+      .dock:hover > div {
+        border-radius: 40px;
+      }
+      .chip {
+        position: relative;
+        z-index: 3;
+        min-width: 52px;
+        height: 52px;
+        padding: 0 8px;
         border: 0;
-        background: transparent;
-        color: var(--faint);
-        padding: 8px 0;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.22);
+        box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.65);
+        color: var(--ink);
         cursor: pointer;
         font: inherit;
+        font-size: 12px;
+        font-weight: 650;
+        transition: transform 0.4s var(--ease);
       }
-      .theme button.on {
-        background: color-mix(in srgb, var(--ink) 12%, transparent);
-        color: var(--ink);
-        border-radius: 8px;
-        margin: 3px;
+      .chip:hover {
+        transform: scale(0.95);
+      }
+      .chip.on {
+        background: rgba(255, 255, 255, 0.55);
+      }
+      html.dark .chip {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      html.dark .chip.on {
+        background: rgba(255, 255, 255, 0.22);
       }
       .hint {
         position: absolute;
         left: 50%;
-        bottom: 22px;
+        bottom: 96px;
         transform: translateX(-50%);
-        color: #f4efe6;
+        color: rgba(255, 255, 255, 0.92);
         font-size: 13px;
-        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
         pointer-events: none;
+        white-space: nowrap;
       }
     </style>
   </head>
   <body>
-    <div class="water"></div>
-    <header class="banner">
-      <p>
-        <strong>随手记网页预览</strong><br />
-        这是浏览器里的样子，方便先看版式。桌面版是独立透明窗口，不占浏览器。
-      </p>
-      <a
-        class="download"
-        href="https://github.com/zxl123456123/-/raw/cursor/note-surface-37dc/dist/suishouji.exe"
-        >下载 Windows 程序</a
+    <div class="wallpaper-dim"></div>
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <filter
+        id="glass-distortion"
+        x="0%"
+        y="0%"
+        width="100%"
+        height="100%"
+        filterUnits="objectBoundingBox"
+        color-interpolation-filters="sRGB"
       >
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.01 0.01"
+          numOctaves="1"
+          seed="5"
+          result="turbulence"
+        />
+        <feComponentTransfer in="turbulence" result="mapped">
+          <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />
+          <feFuncG type="gamma" amplitude="0" exponent="1" offset="0" />
+          <feFuncB type="gamma" amplitude="0" exponent="1" offset="0.5" />
+        </feComponentTransfer>
+        <feGaussianBlur in="turbulence" stdDeviation="3" result="softMap" />
+        <feSpecularLighting
+          in="softMap"
+          surfaceScale="5"
+          specularConstant="1"
+          specularExponent="100"
+          lighting-color="white"
+          result="specLight"
+        >
+          <fePointLight x="-200" y="-200" z="300" />
+        </feSpecularLighting>
+        <feComposite
+          in="specLight"
+          operator="arithmetic"
+          k1="0"
+          k2="1"
+          k3="1"
+          k4="0"
+          result="litImage"
+        />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="softMap"
+          scale="150"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </svg>
+
+    <header class="top">
+      <div class="lg banner">
+        <div class="lg-fx"></div>
+        <div class="lg-tint"></div>
+        <div class="lg-shine"></div>
+        <div class="lg-body">
+          <p>
+            <strong>随手记 · 液态玻璃</strong><br />
+            四层玻璃：折射、着色、高光、文字。没做完的留下，昨天勾掉的不再占地方。
+          </p>
+        </div>
+      </div>
+      <a
+        class="lg download"
+        href="https://github.com/zxl123456123/-/raw/cursor/note-surface-37dc/dist/suishouji.exe"
+      >
+        <span class="lg-fx"></span>
+        <span class="lg-tint"></span>
+        <span class="lg-shine"></span>
+        <span class="lg-body">下载 Windows 程序</span>
+      </a>
     </header>
+
     <div class="stage">
-      <article class="note light" id="note" style="--a: 0.94; left: 72px; top: 36px">
-        <div class="rail"></div>
-        <div class="title" id="drag">
-          <div class="title-name" id="title">随手记</div>
-          <button class="icon pin on" id="pin" title="置顶" aria-label="置顶">⌖</button>
-          <button class="icon" id="more" title="透明度、外观" aria-label="外观">···</button>
-          <button class="icon" title="最小化" aria-label="最小化">–</button>
-          <button class="icon close" title="关闭" aria-label="关闭">×</button>
-        </div>
-        <div class="composer">
-          <span class="grip">⋮</span>
-          <button class="check" id="add" title="记下来" aria-label="添加"></button>
-          <input id="draft" type="text" placeholder="记一件事，回车" autocomplete="off" />
-        </div>
-        <div id="open"></div>
-        <hr class="split" id="split" hidden />
-        <div id="done"></div>
-        <div class="foot" id="foot" hidden>
-          <button type="button" id="toggle-done">已完成 0</button>
-          <button type="button" id="clear">清除</button>
-        </div>
-        <div class="menu" id="menu" hidden>
-          <label>透明度 <span id="pct">94%</span></label>
-          <input id="opacity" type="range" min="25" max="96" value="94" />
-          <label>外观</label>
-          <div class="theme">
-            <button type="button" class="on" id="light">浅色</button>
-            <button type="button" id="dark">深色</button>
+      <article class="lg note" id="note" style="left: 72px; top: 28px">
+        <div class="lg-fx"></div>
+        <div class="lg-tint"></div>
+        <div class="lg-shine"></div>
+        <div class="lg-body">
+          <div class="title" id="drag">
+            <div class="title-name" id="title">随手记</div>
+            <button class="icon pin on" id="pin" title="置顶" aria-label="置顶">⌖</button>
+            <button class="icon" id="more" title="透明度、外观" aria-label="外观">···</button>
+            <button class="icon" title="最小化" aria-label="最小化">–</button>
+            <button class="icon close" title="关闭" aria-label="关闭">×</button>
+          </div>
+          <div class="composer">
+            <span class="grip">⋮</span>
+            <button class="check" id="add" title="记下来" aria-label="添加"></button>
+            <input id="draft" type="text" placeholder="记一件事，回车" autocomplete="off" />
+          </div>
+          <div class="carry" id="carry" hidden></div>
+          <div id="open"></div>
+          <hr class="split" id="split" hidden />
+          <div id="done"></div>
+          <div class="foot" id="foot" hidden>
+            <button type="button" id="toggle-done">已完成 0</button>
+            <button type="button" id="clear">清除</button>
           </div>
         </div>
       </article>
+
+      <aside class="lg side" id="side" style="left: 468px; top: 48px">
+        <div class="lg-fx"></div>
+        <div class="lg-tint"></div>
+        <div class="lg-shine"></div>
+        <div class="lg-body">
+          <button type="button" id="focus-draft">记一条</button>
+          <button type="button" id="sweep-hint">今天的纸</button>
+          <button type="button" id="open-menu">外观</button>
+          <div>没做完的会留到第二天。昨天勾掉的，不再占今天的位置。</div>
+        </div>
+      </aside>
+
+      <div class="lg menu" id="menu" hidden>
+        <div class="lg-fx"></div>
+        <div class="lg-tint"></div>
+        <div class="lg-shine"></div>
+        <div class="lg-body">
+          <label>透明度 <span id="pct">82%</span></label>
+          <input id="opacity" type="range" min="25" max="96" value="82" />
+          <label style="margin-top: 12px">外观</label>
+          <p style="margin: 0; font-size: 13px; color: var(--mute); line-height: 1.45">
+            桌面程序透过真桌面看过去。网页用花墙纸把折射做出来给你看。
+          </p>
+        </div>
+      </div>
     </div>
-    <p class="hint">拖标题移动纸条 · 点圆圈完成 · ··· 里调透明度和深浅色</p>
+
+    <div class="lg dock" id="dock">
+      <div class="lg-fx"></div>
+      <div class="lg-tint"></div>
+      <div class="lg-shine"></div>
+      <button class="chip on" id="light" type="button">浅色</button>
+      <button class="chip" id="dark" type="button">深色</button>
+      <button class="chip on" id="dock-pin" type="button">置顶</button>
+      <button class="chip" id="dock-more" type="button">外观</button>
+    </div>
+    <p class="hint">拖标题移动纸条 · 点圆圈完成 · 底栏会像液态一样胀开</p>
+
     <script>
       const note = document.getElementById("note");
+      const menu = document.getElementById("menu");
       const state = {
         dark: false,
-        opacity: 0.94,
+        opacity: 0.28,
         pin: true,
         hideDone: false,
         nextId: 4,
         items: [
-          { id: 3, text: "把透明度从记录区拿开", done: false },
-          { id: 2, text: "买牛奶", done: false },
-          { id: 1, text: "回邮件给设计", done: true },
+          {
+            id: 3,
+            text: "把透明度从记录区拿开",
+            done: false,
+            created: Date.now(),
+            doneAt: 0,
+          },
+          {
+            id: 2,
+            text: "买牛奶",
+            done: false,
+            created: Date.now() - 36 * 3600 * 1000,
+            doneAt: 0,
+          },
+          {
+            id: 1,
+            text: "回邮件给设计",
+            done: true,
+            created: Date.now(),
+            doneAt: Date.now(),
+          },
         ],
       };
+
+      function dayKey(ms) {
+        const date = new Date(ms);
+        return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
+      }
+
+      function todayKey() {
+        return dayKey(Date.now());
+      }
+
+      function todayLabel() {
+        const date = new Date();
+        return date.getMonth() + 1 + "月" + date.getDate() + "日";
+      }
+
+      function placeMenu() {
+        const rect = note.getBoundingClientRect();
+        const stage = document.querySelector(".stage").getBoundingClientRect();
+        menu.style.left = rect.right - stage.left - 12 + "px";
+        menu.style.top = rect.top - stage.top + 40 + "px";
+      }
 
       function row(item) {
         const wrap = document.createElement("div");
@@ -369,6 +657,7 @@
         check.type = "button";
         check.addEventListener("click", () => {
           item.done = !item.done;
+          item.doneAt = item.done ? Date.now() : 0;
           render();
         });
         const label = document.createElement("div");
@@ -395,14 +684,28 @@
       }
 
       function render() {
-        note.classList.toggle("dark", state.dark);
-        note.classList.toggle("light", !state.dark);
-        note.style.setProperty("--a", String(state.opacity));
+        document.documentElement.classList.toggle("dark", state.dark);
         document.getElementById("pin").classList.toggle("on", state.pin);
+        document.getElementById("dock-pin").classList.toggle("on", state.pin);
+        document.documentElement.style.setProperty(
+          "--tint",
+          state.dark
+            ? "rgba(16, 18, 24, " + state.opacity + ")"
+            : "rgba(255, 255, 255, " + state.opacity + ")",
+        );
+        const today = todayKey();
+        state.items = state.items.filter(
+          (item) => !item.done || dayKey(item.doneAt || Date.now()) >= today,
+        );
         const open = state.items.filter((item) => !item.done);
         const done = state.items.filter((item) => item.done);
+        const leftover = open.filter((item) => dayKey(item.created || Date.now()) < today).length;
+        const date = todayLabel();
         document.getElementById("title").textContent =
-          open.length === 0 ? "随手记" : "随手记  ·  " + open.length;
+          open.length === 0 ? date : date + "  ·  " + open.length;
+        const carry = document.getElementById("carry");
+        carry.hidden = leftover === 0;
+        carry.textContent = leftover === 0 ? "" : leftover + " 件是以前留下的";
         const openBox = document.getElementById("open");
         const doneBox = document.getElementById("done");
         openBox.replaceChildren();
@@ -419,8 +722,10 @@
           ? "已收起 " + done.length
           : "已完成 " + done.length;
         document.getElementById("pct").textContent = Math.round(state.opacity * 100) + "%";
+        document.getElementById("opacity").value = String(Math.round(state.opacity * 100));
         document.getElementById("light").classList.toggle("on", !state.dark);
         document.getElementById("dark").classList.toggle("on", state.dark);
+        if (!menu.hidden) placeMenu();
       }
 
       function add() {
@@ -431,10 +736,17 @@
           id: state.nextId++,
           text: text.slice(0, 2000),
           done: false,
+          created: Date.now(),
+          doneAt: 0,
         });
         input.value = "";
         render();
         input.focus();
+      }
+
+      function toggleMenu() {
+        menu.hidden = !menu.hidden;
+        if (!menu.hidden) placeMenu();
       }
 
       document.getElementById("add").addEventListener("click", add);
@@ -444,8 +756,23 @@
       });
       document.getElementById("more").addEventListener("click", (event) => {
         event.stopPropagation();
-        const menu = document.getElementById("menu");
-        menu.hidden = !menu.hidden;
+        toggleMenu();
+      });
+      document.getElementById("dock-more").addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleMenu();
+      });
+      document.getElementById("open-menu").addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleMenu();
+      });
+      document.getElementById("focus-draft").addEventListener("click", () => {
+        document.getElementById("draft").focus();
+      });
+      document.getElementById("sweep-hint").addEventListener("click", () => {
+        const carry = document.getElementById("carry");
+        carry.hidden = false;
+        carry.textContent = "这是今天的纸，没做完的会留下。";
       });
       document.getElementById("opacity").addEventListener("input", (event) => {
         state.opacity = Number(event.target.value) / 100;
@@ -463,6 +790,10 @@
         state.pin = !state.pin;
         render();
       });
+      document.getElementById("dock-pin").addEventListener("click", () => {
+        state.pin = !state.pin;
+        render();
+      });
       document.getElementById("toggle-done").addEventListener("click", () => {
         state.hideDone = !state.hideDone;
         render();
@@ -472,8 +803,13 @@
         render();
       });
       document.addEventListener("click", (event) => {
-        const menu = document.getElementById("menu");
-        if (!menu.hidden && !menu.contains(event.target) && event.target.id !== "more") {
+        if (
+          !menu.hidden &&
+          !menu.contains(event.target) &&
+          event.target.id !== "more" &&
+          event.target.id !== "dock-more" &&
+          event.target.id !== "open-menu"
+        ) {
           menu.hidden = true;
         }
       });
@@ -491,6 +827,7 @@
         if (!drag) return;
         note.style.left = Math.max(8, event.clientX - drag.x) + "px";
         note.style.top = Math.max(8, event.clientY - drag.y) + "px";
+        if (!menu.hidden) placeMenu();
       });
       document.getElementById("drag").addEventListener("pointerup", () => {
         drag = null;

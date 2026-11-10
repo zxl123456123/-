@@ -1,8 +1,9 @@
 //! 待办本身：新增、勾选、改字、排序、清除。
 //!
-//! 列表按「最近记下的在最上面」排列，和悬浮待办的快速捕获一样。
+//! 纸条是今天的桌面：没做完的会留到第二天，昨天已完成的不再占地方。
 //! 透明度只描述面板底色，文字始终不透明，避免整窗一起变淡。
 
+use chrono::{Datelike, TimeZone};
 use serde::{Deserialize, Serialize};
 
 const NOTE_CHARS: usize = 2_000;
@@ -10,7 +11,7 @@ const MIN_OPACITY: f32 = 0.25;
 const MAX_OPACITY: f32 = 0.96;
 
 fn default_opacity() -> f32 {
-    0.82
+    0.58
 }
 
 fn default_true() -> bool {
@@ -44,6 +45,8 @@ pub struct Todo {
     pub done: bool,
     #[serde(default)]
     pub created_ms: i64,
+    #[serde(default)]
+    pub done_ms: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -75,7 +78,7 @@ pub struct AppState {
     pub opacity: f32,
     #[serde(default = "default_true")]
     pub always_on_top: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub dark: bool,
     #[serde(default)]
     pub hide_done: bool,
@@ -94,7 +97,7 @@ impl Default for AppState {
         Self {
             opacity: default_opacity(),
             always_on_top: true,
-            dark: true,
+            dark: false,
             hide_done: false,
             draft: String::new(),
             window: WindowGeom::default(),
@@ -140,6 +143,16 @@ impl AppState {
         if self.next_id == 0 {
             self.next_id = 1;
         }
+        let now = now_ms();
+        for todo in &mut self.todos {
+            if todo.created_ms == 0 {
+                todo.created_ms = now;
+            }
+            if todo.done && todo.done_ms == 0 {
+                todo.done_ms = now;
+            }
+        }
+        self.sweep_done_before(today_day_key());
     }
 
     pub fn add(&mut self, text: &str) -> Option<u64> {
@@ -156,6 +169,7 @@ impl AppState {
                 text: text.to_string(),
                 done: false,
                 created_ms: now_ms(),
+                done_ms: 0,
             },
         );
         Some(id)
@@ -166,6 +180,7 @@ impl AppState {
             return false;
         };
         todo.done = !todo.done;
+        todo.done_ms = if todo.done { now_ms() } else { 0 };
         true
     }
 
@@ -227,6 +242,46 @@ impl AppState {
     pub fn done_count(&self) -> usize {
         self.todos.len() - self.open_count()
     }
+
+    pub fn leftover_count(&self) -> usize {
+        let today = today_day_key();
+        self.todos
+            .iter()
+            .filter(|todo| !todo.done && day_key(todo.created_ms) < today)
+            .count()
+    }
+
+    /// 昨天及更早勾掉的事项不再占今天的纸。没做完的留下。
+    pub fn sweep_done_before(&mut self, today: i32) -> usize {
+        let before = self.todos.len();
+        self.todos.retain(|todo| {
+            if !todo.done {
+                return true;
+            }
+            day_key(todo.done_ms) >= today
+        });
+        before - self.todos.len()
+    }
+}
+
+pub fn today_day_key() -> i32 {
+    chrono::Local::now().date_naive().num_days_from_ce()
+}
+
+pub fn today_label() -> String {
+    let date = chrono::Local::now().date_naive();
+    format!("{}月{}日", date.month(), date.day())
+}
+
+fn day_key(ms: i64) -> i32 {
+    chrono::DateTime::from_timestamp_millis(ms)
+        .map(|utc| {
+            chrono::Local
+                .from_utc_datetime(&utc.naive_utc())
+                .date_naive()
+                .num_days_from_ce()
+        })
+        .unwrap_or(0)
 }
 
 fn plausible_pos(value: f32) -> bool {
@@ -318,18 +373,21 @@ mod tests {
                     text: "  留下  ".into(),
                     done: false,
                     created_ms: 0,
+                    done_ms: 0,
                 },
                 Todo {
                     id: 3,
                     text: "重复".into(),
                     done: true,
                     created_ms: 0,
+                    done_ms: now_ms(),
                 },
                 Todo {
                     id: 0,
                     text: "   ".into(),
                     done: false,
                     created_ms: 0,
+                    done_ms: 0,
                 },
             ],
             ..AppState::default()
@@ -343,5 +401,54 @@ mod tests {
         assert_eq!(state.todos[0].text, "留下");
         assert_ne!(state.todos[0].id, state.todos[1].id);
         assert!(state.next_id > state.todos.iter().map(|todo| todo.id).max().unwrap());
+    }
+
+    #[test]
+    fn yesterday_done_is_swept_open_leftovers_stay() {
+        let today = today_day_key();
+        let mut state = AppState::default();
+        let open = state.add("以前留下的").unwrap();
+        let done = state.add("昨天勾掉的").unwrap();
+        state.todos[0].created_ms = 1;
+        state.todos[1].created_ms = 1;
+        assert!(state.toggle(done));
+        state
+            .todos
+            .iter_mut()
+            .find(|todo| todo.id == done)
+            .unwrap()
+            .done_ms = 1;
+        assert_eq!(state.sweep_done_before(today), 1);
+        assert_eq!(state.todos.len(), 1);
+        assert_eq!(state.todos[0].id, open);
+        assert_eq!(state.leftover_count(), 1);
+    }
+
+    #[test]
+    fn normalize_stamps_missing_created_ms_as_today() {
+        let mut state = AppState {
+            todos: vec![Todo {
+                id: 1,
+                text: "旧数据".into(),
+                done: false,
+                created_ms: 0,
+                done_ms: 0,
+            }],
+            next_id: 2,
+            ..AppState::default()
+        };
+        state.normalize();
+        assert!(state.todos[0].created_ms > 0);
+        assert_eq!(state.leftover_count(), 0);
+    }
+
+    #[test]
+    fn done_today_stays_on_the_paper() {
+        let mut state = AppState::default();
+        let id = state.add("今天勾掉").unwrap();
+        assert!(state.toggle(id));
+        assert_eq!(state.sweep_done_before(today_day_key()), 0);
+        assert_eq!(state.todos.len(), 1);
+        assert!(state.todos[0].done);
     }
 }
